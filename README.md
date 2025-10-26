@@ -26,20 +26,26 @@ This repository contains **pre-compiled OpenAI Codex CLI binaries for Android Te
 # Update package lists
 pkg update && pkg upgrade -y
 
-# Install Node.js and npm
-pkg install nodejs-lts -y
+# Install Node.js (choose one)
+pkg install nodejs-lts -y    # LTS version (v22.x - recommended)
+# OR
+pkg install nodejs -y        # Latest version (v24.x)
 
 # Verify installation
-node --version  # Should be v18+
-npm --version   # Should be v9+
+node --version  # Should be v14.0.0+
+npm --version   # Should be v6.0.0+
 ```
 
 **Requirements:**
 - Android 7.0+ (Termux)
 - ARM64 architecture
-- Node.js ≥ 18.0.0
-- npm ≥ 9.0.0
+- Node.js ≥ 14.0.0
+- npm ≥ 6.0.0
 - ~50MB free storage
+
+**Available Node.js versions in Termux:**
+- `nodejs-lts` → v22.x (Long Term Support - **recommended**)
+- `nodejs` → v24.x (Latest/Current)
 
 **Want to compile from source?** See [BUILDING.md](./BUILDING.md)
 

@@ -9,14 +9,23 @@ This repository contains **pre-compiled OpenAI Codex CLI binaries for Android Te
 ### What We Do:
 ✅ **Take official OpenAI Codex source code** (https://github.com/openai/codex)
 ✅ **Compile it for ARM64 architecture** (Termux/Linux)
+✅ **Apply minimal Termux compatibility patch** (browser login fix only)
 ✅ **Package it as npm module** for easy installation
 ✅ **Keep OpenAI's copyright and license** (Apache 2.0)
 
 ### What We DON'T Do:
-❌ **NO source code modifications**
-❌ **NO feature changes**
-❌ **NO functionality alterations**
+❌ **NO feature additions or removals**
+❌ **NO functionality changes**
+❌ **NO behavior alterations**
 ❌ **NO forking or replacing** upstream
+
+### ⚠️ Applied Patches:
+**1. Termux Browser Login Fix** (`login/src/server.rs`)
+- **Problem**: Upstream uses `webbrowser` crate which requires Android Activity context
+- **Fix**: Use `termux-open-url` command on Android instead of `webbrowser::open()`
+- **Lines Changed**: 9 lines (1 file)
+- **Impact**: Fixes crash on `codex login`, no other changes
+- **Commit**: [View patch](https://github.com/DioNanos/codex-termux/commit/754b506d)
 
 ---
 
@@ -82,12 +91,34 @@ codex --version
 
 ## 🎯 Quick Start
 
-```bash
-# Authenticate with OpenAI
-codex login
+### Authentication (Required)
 
-# Generate code
+⚠️ **IMPORTANT for Termux**: Browser-based login doesn't work on Android. Use API key instead:
+
+```bash
+# Get your API key from: https://platform.openai.com/api-keys
+
+# Login with API key (recommended for Termux)
+echo "your-openai-api-key" | codex login --with-api-key
+
+# Or set environment variable
+export OPENAI_API_KEY="your-api-key"
+
+# Verify login
+codex login status
+```
+
+### Usage
+
+```bash
+# Interactive mode
 codex "write a fibonacci function"
+
+# Execute directly
+codex exec "create a simple web server"
+
+# Get help
+codex --help
 ```
 
 For full usage guide, see **[npm documentation](https://www.npmjs.com/package/@mmmbuto/codex-cli-termux)**.

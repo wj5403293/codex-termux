@@ -120,6 +120,46 @@ version = "0.53.0"  # Was: "0.0.0"
 
 ---
 
+### 4. Auto-Update URL Redirect
+
+**File**: `codex-rs/tui/src/updates.rs`
+**Lines Modified**: 8
+**Date Applied**: 2025-10-31
+**Upstream Issue**: Auto-update checks OpenAI repo, not Termux fork
+
+#### Problem
+Upstream checks OpenAI releases for updates:
+```rust
+const LATEST_RELEASE_URL: &str = "https://api.github.com/repos/openai/codex/releases/latest";
+```
+
+Tag format mismatch:
+- Upstream uses: `rust-v0.53.0`
+- Termux fork uses: `v0.53.0-termux`
+
+#### Solution
+1. **Change URL** to point to Termux fork
+2. **Update tag parser** to handle `v`-prefixed tags
+
+**Changes:**
+```rust
+// Line 56: Update URL
+const LATEST_RELEASE_URL: &str = "https://api.github.com/repos/DioNanos/codex-termux/releases/latest";
+
+// Lines 81-85: Update tag parser for Termux format
+let version = latest_tag_name
+    .strip_prefix("v")
+    .unwrap_or(&latest_tag_name)
+    .to_string();
+```
+
+**Impact:**
+- ✅ Auto-update now checks Termux fork releases
+- ✅ Supports both `vX.Y.Z-termux` and fallback formats
+- ✅ No breaking changes to existing functionality
+
+---
+
 ## Testing Checklist
 
 Before each release:

@@ -1,4 +1,4 @@
-# 🚀 Codex CLI - Termux Edition
+# 🤖 Codex CLI - Termux Edition
 
 > **Pre-compiled OpenAI Codex for Android Termux (ARM64)**
 

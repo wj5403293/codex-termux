@@ -145,6 +145,53 @@ let version = latest_tag_name
 
 ---
 
+### 5. Version Parser Fix for `-termux` Suffix
+
+**File**: `codex-rs/tui/src/updates.rs`
+**Lines Modified**: 3
+**Date Applied**: 2025-11-05
+**Upstream Issue**: Version parser fails on `-termux` suffix, blocking update detection
+
+#### Problem
+The version parser splits version string by `.` and tries to parse each part as u64:
+```rust
+// Old code (fails on "0.55.0-termux")
+let pat = iter.next()?.parse::<u64>().ok()?;  // "0-termux" → FAIL ❌
+```
+
+When comparing versions:
+- Current: `0.53.0`
+- Latest from API: `0.55.0-termux`
+- Parser tries: `"0-termux".parse::<u64>()` → **Returns None**
+- Result: `is_newer()` returns `None` → No update notification shown ❌
+
+**Real-world impact**: Users on 0.53.x never see notification for 0.55.0-termux!
+
+#### Solution
+Split patch version on `-` to extract numeric part before parsing:
+
+**Changes:**
+```rust
+// New code (handles "0.55.0-termux" correctly)
+let pat_str = iter.next()?;                    // "0-termux"
+let pat = pat_str.split('-').next()?.parse::<u64>().ok()?; // "0" → OK ✅
+```
+
+**Testing:**
+```rust
+parse_version("0.55.0")        → Some((0, 55, 0)) ✅
+parse_version("0.55.0-termux") → Some((0, 55, 0)) ✅
+parse_version("0.55.1-termux") → Some((0, 55, 1)) ✅
+```
+
+**Impact:**
+- ✅ Auto-update detection now works across `-termux` versions
+- ✅ Users on 0.53.x → 0.55.x see update notification
+- ✅ Incremental updates (0.55.0 → 0.55.1) also work
+- ✅ Backward compatible with non-suffixed versions
+
+---
+
 ## Versioning Strategy
 
 | Component | Version | Example |

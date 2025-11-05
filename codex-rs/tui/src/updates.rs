@@ -140,7 +140,9 @@ fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
     let mut iter = v.trim().split('.');
     let maj = iter.next()?.parse::<u64>().ok()?;
     let min = iter.next()?.parse::<u64>().ok()?;
-    let pat = iter.next()?.parse::<u64>().ok()?;
+    // Handle suffixes like "0-termux" by splitting on '-' and taking first part
+    let pat_str = iter.next()?;
+    let pat = pat_str.split('-').next()?.parse::<u64>().ok()?;
     Some((maj, min, pat))
 }
 

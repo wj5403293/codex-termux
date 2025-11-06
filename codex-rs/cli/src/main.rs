@@ -269,14 +269,33 @@ fn run_update_action(action: UpdateAction) -> anyhow::Result<()> {
     println!();
     let (cmd, args) = action.command_args();
     let cmd_str = action.command_str();
-    println!("Updating Codex via `{cmd_str}`...");
-    let status = std::process::Command::new(cmd).args(args).status()?;
-    if !status.success() {
-        anyhow::bail!("`{cmd_str}` failed with status {status}");
+
+    // On Android/Termux, auto-update is restricted because the binary is in use
+    // and cannot be overwritten. Show manual update instructions instead.
+    #[cfg(target_os = "android")]
+    {
+        println!("⚠️  Auto-update is not available on Termux/Android");
+        println!("    (binary in use cannot be overwritten)");
+        println!();
+        println!("📦 To update manually, run:");
+        println!("    {cmd_str}");
+        println!();
+        println!("💡 After update completes, restart Codex to use the new version.");
+        return Ok(());
     }
-    println!();
-    println!("🎉 Update ran successfully! Please restart Codex.");
-    Ok(())
+
+    // On other platforms, execute the update command automatically
+    #[cfg(not(target_os = "android"))]
+    {
+        println!("Updating Codex via `{cmd_str}`...");
+        let status = std::process::Command::new(cmd).args(args).status()?;
+        if !status.success() {
+            anyhow::bail!("`{cmd_str}` failed with status {status}");
+        }
+        println!();
+        println!("🎉 Update ran successfully! Please restart Codex.");
+        Ok(())
+    }
 }
 
 #[derive(Debug, Default, Parser, Clone)]

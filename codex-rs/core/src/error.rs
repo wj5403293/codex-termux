@@ -109,6 +109,9 @@ pub enum CodexErr {
     #[error("{0}")]
     ConnectionFailed(ConnectionFailedError),
 
+    #[error("Quota exceeded. Check your plan and billing details.")]
+    QuotaExceeded,
+
     #[error(
         "To use Codex with your ChatGPT plan, upgrade to Plus: https://openai.com/chatgpt/pricing."
     )]
@@ -134,6 +137,9 @@ pub enum CodexErr {
 
     #[error("unsupported operation: {0}")]
     UnsupportedOperation(String),
+
+    #[error("{0}")]
+    RefreshTokenFailed(RefreshTokenFailedError),
 
     #[error("Fatal error: {0}")]
     Fatal(String),
@@ -199,6 +205,30 @@ impl std::fmt::Display for ResponseStreamFailed {
                 .unwrap_or_default()
         )
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[error("{message}")]
+pub struct RefreshTokenFailedError {
+    pub reason: RefreshTokenFailedReason,
+    pub message: String,
+}
+
+impl RefreshTokenFailedError {
+    pub fn new(reason: RefreshTokenFailedReason, message: impl Into<String>) -> Self {
+        Self {
+            reason,
+            message: message.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RefreshTokenFailedReason {
+    Expired,
+    Exhausted,
+    Revoked,
+    Other,
 }
 
 #[derive(Debug)]

@@ -65,7 +65,7 @@ npm install -g @mmmbuto/codex-cli-termux
 
 ```bash
 codex --version
-# Output: codex-cli 0.57.0
+# Output: codex-cli 0.58.0
 
 codex login
 # Opens browser for authentication
@@ -122,7 +122,7 @@ See [LICENSE](./LICENSE) file for details.
 
 ---
 
-**Version**: Based on OpenAI Codex 0.57.0
+**Version**: Based on OpenAI Codex 0.58.0 (includes GPT-5.1 support)
 **Platform**: Android Termux ARM64
 **Maintained**: Community-driven, not affiliated with OpenAI
 

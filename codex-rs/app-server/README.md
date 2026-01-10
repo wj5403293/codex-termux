@@ -11,6 +11,8 @@
 - [Initialization](#initialization)
 - [API Overview](#api-overview)
 - [Events](#events)
+- [Approvals](#approvals)
+- [Skills](#skills)
 - [Auth endpoints](#auth-endpoints)
 
 ## Protocol
@@ -39,7 +41,7 @@ Use the thread APIs to create, list, or archive conversations. Drive a conversat
 ## Lifecycle Overview
 
 - Initialize once: Immediately after launching the codex app-server process, send an `initialize` request with your client metadata, then emit an `initialized` notification. Any other request before this handshake gets rejected.
-- Start (or resume) a thread: Call `thread/start` to open a fresh conversation. The response returns the thread object and you’ll also get a `thread/started` notification. If you’re continuing an existing conversation, call `thread/resume` with its ID instead.
+- Start (or resume) a thread: Call `thread/start` to open a fresh conversation. The response returns the thread object and you’ll also get a `thread/started` notification. If you’re continuing an existing conversation, call `thread/resume` with its ID instead. If you want to branch from an existing conversation, call `thread/fork` to create a new thread id with copied history.
 - Begin a turn: To send user input, call `turn/start` with the target `threadId` and the user's input. Optional fields let you override model, cwd, sandbox policy, etc. This immediately returns the new turn object and triggers a `turn/started` notification.
 - Stream events: After `turn/start`, keep reading JSON-RPC notifications on stdout. You’ll see `item/started`, `item/completed`, deltas like `item/agentMessage/delta`, tool progress, etc. These represent streaming model output plus any side effects (commands, tool calls, reasoning notes).
 - Finish the turn: When the model is done (or the turn is interrupted via making the `turn/interrupt` call), the server sends `turn/completed` with the final turn state and token usage.
@@ -70,7 +72,9 @@ Example (from OpenAI's official VSCode extension):
 
 - `thread/start` — create a new thread; emits `thread/started` and auto-subscribes you to turn/item events for that thread.
 - `thread/resume` — reopen an existing thread by id so subsequent `turn/start` calls append to it.
+- `thread/fork` — fork an existing thread into a new thread id by copying the stored history; emits `thread/started` and auto-subscribes you to turn/item events for the new thread.
 - `thread/list` — page through stored rollouts; supports cursor-based pagination and optional `modelProviders` filtering.
+- `thread/loaded/list` — list the thread ids currently loaded in memory.
 - `thread/archive` — move a thread’s rollout file into the archived directory; returns `{}` on success.
 - `thread/rollback` — drop the last N turns from the agent’s in-memory context and persist a rollback marker in the rollout so future resumes see the pruned history; returns the updated `thread` (with `turns` populated) on success.
 - `turn/start` — add user input to a thread and begin Codex generation; responds with the initial `turn` object and streams `turn/started`, `item/*`, and `turn/completed` notifications.
@@ -86,6 +90,7 @@ Example (from OpenAI's official VSCode extension):
 - `config/read` — fetch the effective config on disk after resolving config layering.
 - `config/value/write` — write a single config key/value to the user's config.toml on disk.
 - `config/batchWrite` — apply multiple config edits atomically to the user's config.toml on disk.
+- `configRequirements/read` — fetch the loaded requirements allow-lists from `requirements.toml` and/or MDM (or `null` if none are configured).
 
 ### Example: Start or resume a thread
 
@@ -118,6 +123,14 @@ To continue a stored session, call `thread/resume` with the `thread.id` you prev
 { "id": 11, "result": { "thread": { "id": "thr_123", … } } }
 ```
 
+To branch from a stored session, call `thread/fork` with the `thread.id`. This creates a new thread id and emits a `thread/started` notification for it:
+
+```json
+{ "method": "thread/fork", "id": 12, "params": { "threadId": "thr_123" } }
+{ "id": 12, "result": { "thread": { "id": "thr_456", … } } }
+{ "method": "thread/started", "params": { "thread": { … } } }
+```
+
 ### Example: List threads (with pagination & filters)
 
 `thread/list` lets you render a history UI. Pass any combination of:
@@ -143,6 +156,17 @@ Example:
 ```
 
 When `nextCursor` is `null`, you’ve reached the final page.
+
+### Example: List loaded threads
+
+`thread/loaded/list` returns thread ids currently loaded in memory. This is useful when you want to check which sessions are active without scanning rollouts on disk.
+
+```json
+{ "method": "thread/loaded/list", "id": 21 }
+{ "id": 21, "result": {
+    "data": ["thr_123", "thr_456"]
+} }
+```
 
 ### Example: Archive a thread
 
@@ -190,6 +214,26 @@ You can optionally specify config overrides on the new turn. If specified, these
 } }
 { "id": 30, "result": { "turn": {
     "id": "turn_456",
+    "status": "inProgress",
+    "items": [],
+    "error": null
+} } }
+```
+
+### Example: Start a turn (invoke a skill)
+
+Invoke a skill explicitly by including `$<skill-name>` in the text input and adding a `skill` input item alongside it.
+
+```json
+{ "method": "turn/start", "id": 33, "params": {
+    "threadId": "thr_123",
+    "input": [
+        { "type": "text", "text": "$skill-creator Add a new skill for triaging flaky CI and include step-by-step usage." },
+        { "type": "skill", "name": "skill-creator", "path": "/Users/me/.codex/skills/skill-creator/SKILL.md" }
+    ]
+} }
+{ "id": 33, "result": { "turn": {
+    "id": "turn_457",
     "status": "inProgress",
     "items": [],
     "error": null
@@ -404,6 +448,46 @@ Order of messages:
 4. `item/completed` — returns the same `fileChange` item with `status` updated to `completed`, `failed`, or `declined` after the patch attempt. Rely on this to show success/failure and finalize the diff state in your UI.
 
 UI guidance for IDEs: surface an approval dialog as soon as the request arrives. The turn will proceed after the server receives a response to the approval request. The terminal `item/completed` notification will be sent with the appropriate status.
+
+## Skills
+
+Invoke a skill by including `$<skill-name>` in the text input. Add a `skill` input item (recommended) so the backend injects full skill instructions instead of relying on the model to resolve the name.
+
+```json
+{
+  "method": "turn/start",
+  "id": 101,
+  "params": {
+    "threadId": "thread-1",
+    "input": [
+      { "type": "text", "text": "$skill-creator Add a new skill for triaging flaky CI." },
+      { "type": "skill", "name": "skill-creator", "path": "/Users/me/.codex/skills/skill-creator/SKILL.md" }
+    ]
+  }
+}
+```
+
+If you omit the `skill` item, the model will still parse the `$<skill-name>` marker and try to locate the skill, which can add latency.
+
+Example:
+
+```
+$skill-creator Add a new skill for triaging flaky CI and include step-by-step usage.
+```
+
+Use `skills/list` to fetch the available skills (optionally scoped by `cwd` and/or with `forceReload`).
+
+```json
+{ "method": "skills/list", "id": 25, "params": {
+    "cwd": "/Users/me/project",
+    "forceReload": false
+} }
+{ "id": 25, "result": {
+    "skills": [
+        { "name": "skill-creator", "description": "Create or update a Codex skill" }
+    ]
+} }
+```
 
 ## Auth endpoints
 

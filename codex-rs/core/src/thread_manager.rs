@@ -59,14 +59,19 @@ pub(crate) struct ThreadManagerState {
 }
 
 impl ThreadManager {
-    pub fn new(auth_manager: Arc<AuthManager>, session_source: SessionSource) -> Self {
+    pub fn new(
+        codex_home: PathBuf,
+        auth_manager: Arc<AuthManager>,
+        session_source: SessionSource,
+    ) -> Self {
         Self {
             state: Arc::new(ThreadManagerState {
                 threads: Arc::new(RwLock::new(HashMap::new())),
-                models_manager: Arc::new(ModelsManager::new(auth_manager.clone())),
-                skills_manager: Arc::new(SkillsManager::new(
-                    auth_manager.codex_home().to_path_buf(),
+                models_manager: Arc::new(ModelsManager::new(
+                    codex_home.clone(),
+                    auth_manager.clone(),
                 )),
+                skills_manager: Arc::new(SkillsManager::new(codex_home)),
                 auth_manager,
                 session_source,
             }),
@@ -94,17 +99,16 @@ impl ThreadManager {
         provider: ModelProviderInfo,
         codex_home: PathBuf,
     ) -> Self {
-        let auth_manager = AuthManager::from_auth_for_testing_with_home(auth, codex_home);
+        let auth_manager = AuthManager::from_auth_for_testing(auth);
         Self {
             state: Arc::new(ThreadManagerState {
                 threads: Arc::new(RwLock::new(HashMap::new())),
                 models_manager: Arc::new(ModelsManager::with_provider(
+                    codex_home.clone(),
                     auth_manager.clone(),
                     provider,
                 )),
-                skills_manager: Arc::new(SkillsManager::new(
-                    auth_manager.codex_home().to_path_buf(),
-                )),
+                skills_manager: Arc::new(SkillsManager::new(codex_home)),
                 auth_manager,
                 session_source: SessionSource::Exec,
             }),
@@ -126,6 +130,10 @@ impl ThreadManager {
 
     pub async fn list_models(&self, config: &Config) -> Vec<ModelPreset> {
         self.state.models_manager.list_models(config).await
+    }
+
+    pub async fn list_thread_ids(&self) -> Vec<ThreadId> {
+        self.state.threads.read().await.keys().copied().collect()
     }
 
     pub async fn get_thread(&self, thread_id: ThreadId) -> CodexResult<Arc<CodexThread>> {
@@ -165,53 +173,6 @@ impl ThreadManager {
             .await
     }
 
-    #[deprecated(note = "use get_thread")]
-    pub async fn get_conversation(&self, thread_id: ThreadId) -> CodexResult<Arc<CodexThread>> {
-        self.get_thread(thread_id).await
-    }
-
-    #[deprecated(note = "use start_thread")]
-    pub async fn new_conversation(&self, config: Config) -> CodexResult<NewThread> {
-        self.start_thread(config).await
-    }
-
-    #[deprecated(note = "use resume_thread_from_rollout")]
-    pub async fn resume_conversation_from_rollout(
-        &self,
-        config: Config,
-        rollout_path: PathBuf,
-        auth_manager: Arc<AuthManager>,
-    ) -> CodexResult<NewThread> {
-        self.resume_thread_from_rollout(config, rollout_path, auth_manager)
-            .await
-    }
-
-    #[deprecated(note = "use resume_thread_with_history")]
-    pub async fn resume_conversation_with_history(
-        &self,
-        config: Config,
-        initial_history: InitialHistory,
-        auth_manager: Arc<AuthManager>,
-    ) -> CodexResult<NewThread> {
-        self.resume_thread_with_history(config, initial_history, auth_manager)
-            .await
-    }
-
-    #[deprecated(note = "use remove_thread")]
-    pub async fn remove_conversation(&self, thread_id: &ThreadId) -> Option<Arc<CodexThread>> {
-        self.remove_thread(thread_id).await
-    }
-
-    #[deprecated(note = "use fork_thread")]
-    pub async fn fork_conversation(
-        &self,
-        nth_user_message: usize,
-        config: Config,
-        path: PathBuf,
-    ) -> CodexResult<NewThread> {
-        self.fork_thread(nth_user_message, config, path).await
-    }
-
     /// Removes the thread from the manager's internal map, though the thread is stored
     /// as `Arc<CodexThread>`, it is possible that other references to it exist elsewhere.
     /// Returns the thread if the thread was found and removed.
@@ -222,7 +183,7 @@ impl ThreadManager {
     /// Fork an existing thread by taking messages up to the given position (not including
     /// the message at the given position) and starting a new thread with identical
     /// configuration (unless overridden by the caller's `config`). The new thread will have
-    /// a fresh id.
+    /// a fresh id. Pass `usize::MAX` to keep the full rollout history.
     pub async fn fork_thread(
         &self,
         nth_user_message: usize,
@@ -318,7 +279,6 @@ impl ThreadManagerState {
         ));
         self.threads.write().await.insert(thread_id, thread.clone());
 
-        #[allow(deprecated)]
         Ok(NewThread {
             thread_id,
             thread,

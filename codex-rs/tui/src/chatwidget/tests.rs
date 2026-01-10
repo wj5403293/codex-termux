@@ -11,6 +11,7 @@ use codex_core::config::Config;
 use codex_core::config::ConfigBuilder;
 use codex_core::config::Constrained;
 use codex_core::config::ConstraintError;
+use codex_core::config_loader::RequirementSource;
 use codex_core::features::Feature;
 use codex_core::models_manager::manager::ModelsManager;
 use codex_core::protocol::AgentMessageDeltaEvent;
@@ -63,6 +64,8 @@ use crossterm::event::KeyEvent;
 use crossterm::event::KeyModifiers;
 use insta::assert_snapshot;
 use pretty_assertions::assert_eq;
+#[cfg(target_os = "windows")]
+use serial_test::serial;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use tempfile::NamedTempFile;
@@ -75,6 +78,11 @@ fn set_windows_sandbox_enabled(enabled: bool) {
     codex_core::set_windows_sandbox_enabled(enabled);
 }
 
+#[cfg(target_os = "windows")]
+fn set_windows_elevated_sandbox_enabled(enabled: bool) {
+    codex_core::set_windows_elevated_sandbox_enabled(enabled);
+}
+
 async fn test_config() -> Config {
     // Use base defaults to avoid depending on host state.
     let codex_home = std::env::temp_dir();
@@ -83,6 +91,15 @@ async fn test_config() -> Config {
         .build()
         .await
         .expect("config")
+}
+
+fn invalid_value(candidate: impl Into<String>, allowed: impl Into<String>) -> ConstraintError {
+    ConstraintError::InvalidValue {
+        field_name: "<unknown>",
+        candidate: candidate.into(),
+        allowed: allowed.into(),
+        requirement_source: RequirementSource::Unknown,
+    }
 }
 
 fn snapshot(percent: f64) -> RateLimitSnapshot {
@@ -366,6 +383,7 @@ async fn make_chatwidget_manual(
         skills: None,
     });
     let auth_manager = AuthManager::from_auth_for_testing(CodexAuth::from_api_key("test"));
+    let codex_home = cfg.codex_home.clone();
     let widget = ChatWidget {
         app_event_tx,
         codex_op_tx: op_tx,
@@ -374,7 +392,7 @@ async fn make_chatwidget_manual(
         config: cfg,
         model: resolved_model.clone(),
         auth_manager: auth_manager.clone(),
-        models_manager: Arc::new(ModelsManager::new(auth_manager)),
+        models_manager: Arc::new(ModelsManager::new(codex_home, auth_manager)),
         session_header: SessionHeader::new(resolved_model),
         initial_user_message: None,
         token_info: None,
@@ -415,7 +433,10 @@ async fn make_chatwidget_manual(
 fn set_chatgpt_auth(chat: &mut ChatWidget) {
     chat.auth_manager =
         AuthManager::from_auth_for_testing(CodexAuth::create_dummy_chatgpt_auth_for_testing());
-    chat.models_manager = Arc::new(ModelsManager::new(chat.auth_manager.clone()));
+    chat.models_manager = Arc::new(ModelsManager::new(
+        chat.config.codex_home.clone(),
+        chat.auth_manager.clone(),
+    ));
 }
 
 pub(crate) async fn make_chatwidget_manual_with_sender() -> (
@@ -2013,6 +2034,35 @@ async fn approvals_selection_popup_snapshot() {
     assert_snapshot!("approvals_selection_popup", popup);
 }
 
+#[cfg(target_os = "windows")]
+#[tokio::test]
+#[serial]
+async fn approvals_selection_popup_snapshot_windows_degraded_sandbox() {
+    let (mut chat, _rx, _op_rx) = make_chatwidget_manual(None).await;
+
+    let was_sandbox_enabled = codex_core::get_platform_sandbox().is_some();
+    let was_elevated_enabled = codex_core::is_windows_elevated_sandbox_enabled();
+
+    chat.config.notices.hide_full_access_warning = None;
+    chat.config.features.enable(Feature::WindowsSandbox);
+    chat.config
+        .features
+        .disable(Feature::WindowsSandboxElevated);
+    set_windows_sandbox_enabled(true);
+    set_windows_elevated_sandbox_enabled(false);
+
+    chat.open_approvals_popup();
+
+    let popup = render_bottom_popup(&chat, 80);
+    insta::with_settings!({ snapshot_suffix => "windows_degraded" }, {
+        assert_snapshot!("approvals_selection_popup", popup);
+    });
+
+    // Avoid leaking sandbox global state into other tests.
+    set_windows_sandbox_enabled(was_sandbox_enabled);
+    set_windows_elevated_sandbox_enabled(was_elevated_enabled);
+}
+
 #[tokio::test]
 async fn preset_matching_ignores_extra_writable_roots() {
     let preset = builtin_approval_presets()
@@ -2063,8 +2113,8 @@ async fn windows_auto_mode_prompt_requests_enabling_sandbox_feature() {
 
     let popup = render_bottom_popup(&chat, 120);
     assert!(
-        popup.contains("Agent mode on Windows uses an experimental sandbox"),
-        "expected auto mode prompt to mention enabling the sandbox feature, popup: {popup}"
+        popup.contains("requires elevation"),
+        "expected auto mode prompt to mention elevation, popup: {popup}"
     );
 }
 
@@ -2080,12 +2130,16 @@ async fn startup_prompts_for_windows_sandbox_when_agent_requested() {
 
     let popup = render_bottom_popup(&chat, 120);
     assert!(
-        popup.contains("Agent mode on Windows uses an experimental sandbox"),
-        "expected startup prompt to explain sandbox: {popup}"
+        popup.contains("requires elevation"),
+        "expected startup prompt to explain elevation: {popup}"
     );
     assert!(
-        popup.contains("Enable experimental sandbox"),
-        "expected startup prompt to offer enabling the sandbox: {popup}"
+        popup.contains("Set up agent sandbox"),
+        "expected startup prompt to offer agent sandbox setup: {popup}"
+    );
+    assert!(
+        popup.contains("Stay in"),
+        "expected startup prompt to offer staying in current mode: {popup}"
     );
 
     set_windows_sandbox_enabled(true);
@@ -2299,7 +2353,7 @@ async fn approvals_popup_shows_disabled_presets() {
     chat.config.approval_policy =
         Constrained::new(AskForApproval::OnRequest, |candidate| match candidate {
             AskForApproval::OnRequest => Ok(()),
-            _ => Err(ConstraintError::invalid_value(
+            _ => Err(invalid_value(
                 candidate.to_string(),
                 "this message should be printed in the description",
             )),
@@ -2335,10 +2389,7 @@ async fn approvals_popup_navigation_skips_disabled() {
     chat.config.approval_policy =
         Constrained::new(AskForApproval::OnRequest, |candidate| match candidate {
             AskForApproval::OnRequest => Ok(()),
-            _ => Err(ConstraintError::invalid_value(
-                candidate.to_string(),
-                "[on-request]",
-            )),
+            _ => Err(invalid_value(candidate.to_string(), "[on-request]")),
         })
         .expect("construct constrained approval policy");
     chat.open_approvals_popup();

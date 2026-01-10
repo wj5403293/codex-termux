@@ -218,7 +218,7 @@ pub async fn run_main(cli: Cli, codex_linux_sandbox_exe: Option<PathBuf>) -> any
     let config =
         Config::load_with_cli_overrides_and_harness_overrides(cli_kv_overrides, overrides).await?;
 
-    if let Err(err) = enforce_login_restrictions(&config).await {
+    if let Err(err) = enforce_login_restrictions(&config) {
         eprintln!("{err}");
         std::process::exit(1);
     }
@@ -286,7 +286,11 @@ pub async fn run_main(cli: Cli, codex_linux_sandbox_exe: Option<PathBuf>) -> any
         true,
         config.cli_auth_credentials_store_mode,
     );
-    let thread_manager = ThreadManager::new(auth_manager.clone(), SessionSource::Exec);
+    let thread_manager = ThreadManager::new(
+        config.codex_home.clone(),
+        auth_manager.clone(),
+        SessionSource::Exec,
+    );
     let default_model = thread_manager
         .get_models_manager()
         .get_model(&config.model, &config)

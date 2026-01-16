@@ -230,7 +230,7 @@ Stable validation (2026-01-10): 49 passed / 0 failed / 0 skipped — see [CODEX_
 
 ## 🧪 Testing & Validation
 
-Latest validation (2026-01-16): 49 passed / 0 failed / 0 skipped — see [CODEX_TEST_REPORT_v0.80.0.md](./CODEX_TEST_REPORT_v0.86.0.md).
+Latest validation (2026-01-16): 48 passed / 0 failed / 2 skipped — see [CODEX_TEST_REPORT_v0.86.0.md](./CODEX_TEST_REPORT_v0.86.0.md).
 
 <details>
 <summary>Details: automated test suite, coverage, and sample report</summary>

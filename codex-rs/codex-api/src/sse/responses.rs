@@ -136,6 +136,150 @@ struct SseEvent {
     content_index: Option<i64>,
 }
 
+#[derive(Debug)]
+pub enum ResponsesEventError {
+    Api(ApiError),
+}
+
+impl ResponsesEventError {
+    pub fn into_api_error(self) -> ApiError {
+        match self {
+            Self::Api(error) => error,
+        }
+    }
+}
+
+pub fn process_responses_event(
+    event: ResponsesStreamEvent,
+) -> std::result::Result<Option<ResponseEvent>, ResponsesEventError> {
+    match event.kind.as_str() {
+        "response.output_item.done" => {
+            if let Some(item_val) = event.item {
+                if let Ok(item) = serde_json::from_value::<ResponseItem>(item_val) {
+                    return Ok(Some(ResponseEvent::OutputItemDone(item)));
+                }
+                debug!("failed to parse ResponseItem from output_item.done");
+            }
+        }
+        "response.output_text.delta" => {
+            if let Some(delta) = event.delta {
+                return Ok(Some(ResponseEvent::OutputTextDelta(delta)));
+            }
+        }
+        "response.reasoning_summary_text.delta" => {
+            if let (Some(delta), Some(summary_index)) = (event.delta, event.summary_index) {
+                return Ok(Some(ResponseEvent::ReasoningSummaryDelta {
+                    delta,
+                    summary_index,
+                }));
+            }
+        }
+        "response.reasoning_text.delta" => {
+            if let (Some(delta), Some(content_index)) = (event.delta, event.content_index) {
+                return Ok(Some(ResponseEvent::ReasoningContentDelta {
+                    delta,
+                    content_index,
+                }));
+            }
+        }
+        "response.created" => {
+            if event.response.is_some() {
+                return Ok(Some(ResponseEvent::Created {}));
+            }
+        }
+        "response.failed" => {
+            if let Some(resp_val) = event.response {
+                let mut response_error = ApiError::Stream("response.failed event received".into());
+                if let Some(error) = resp_val.get("error")
+                    && let Ok(error) = serde_json::from_value::<Error>(error.clone())
+                {
+                    if is_context_window_error(&error) {
+                        response_error = ApiError::ContextWindowExceeded;
+                    } else if is_quota_exceeded_error(&error) {
+                        response_error = ApiError::QuotaExceeded;
+                    } else if is_usage_not_included(&error) {
+                        response_error = ApiError::UsageNotIncluded;
+                    } else if is_invalid_prompt_error(&error) {
+                        let message = error
+                            .message
+                            .unwrap_or_else(|| "Invalid request.".to_string());
+                        response_error = ApiError::InvalidRequest { message };
+                    } else {
+                        let delay = try_parse_retry_after(&error);
+                        let message = error.message.unwrap_or_default();
+                        response_error = ApiError::Retryable { message, delay };
+                    }
+                }
+                return Err(ResponsesEventError::Api(response_error));
+            }
+
+            return Err(ResponsesEventError::Api(ApiError::Stream(
+                "response.failed event received".into(),
+            )));
+        }
+        "response.completed" => {
+            if let Some(resp_val) = event.response {
+                match serde_json::from_value::<ResponseCompleted>(resp_val) {
+                    Ok(resp) => {
+                        return Ok(Some(ResponseEvent::Completed {
+                            response_id: resp.id,
+                            token_usage: resp.usage.map(Into::into),
+                        }));
+                    }
+                    Err(err) => {
+                        let error = format!("failed to parse ResponseCompleted: {err}");
+                        debug!("{error}");
+                        return Err(ResponsesEventError::Api(ApiError::Stream(error)));
+                    }
+                }
+            }
+        }
+        "response.done" => {
+            if let Some(resp_val) = event.response {
+                match serde_json::from_value::<ResponseDone>(resp_val) {
+                    Ok(resp) => {
+                        return Ok(Some(ResponseEvent::Completed {
+                            response_id: resp.id.unwrap_or_default(),
+                            token_usage: resp.usage.map(Into::into),
+                        }));
+                    }
+                    Err(err) => {
+                        let error = format!("failed to parse ResponseCompleted: {err}");
+                        debug!("{error}");
+                        return Err(ResponsesEventError::Api(ApiError::Stream(error)));
+                    }
+                }
+            }
+
+            debug!("response.done missing response payload");
+            return Ok(Some(ResponseEvent::Completed {
+                response_id: String::new(),
+                token_usage: None,
+            }));
+        }
+        "response.output_item.added" => {
+            if let Some(item_val) = event.item {
+                if let Ok(item) = serde_json::from_value::<ResponseItem>(item_val) {
+                    return Ok(Some(ResponseEvent::OutputItemAdded(item)));
+                }
+                debug!("failed to parse ResponseItem from output_item.done");
+            }
+        }
+        "response.reasoning_summary_part.added" => {
+            if let Some(summary_index) = event.summary_index {
+                return Ok(Some(ResponseEvent::ReasoningSummaryPartAdded {
+                    summary_index,
+                }));
+            }
+        }
+        _ => {
+            trace!("unhandled responses event: {}", event.kind);
+        }
+    }
+
+    Ok(None)
+}
+
 pub async fn process_sse(
     stream: ByteStream,
     tx_event: mpsc::Sender<Result<ResponseEvent, ApiError>>,
@@ -342,6 +486,10 @@ fn is_quota_exceeded_error(error: &Error) -> bool {
 
 fn is_usage_not_included(error: &Error) -> bool {
     error.code.as_deref() == Some("usage_not_included")
+}
+
+fn is_invalid_prompt_error(error: &Error) -> bool {
+    error.code.as_deref() == Some("invalid_prompt")
 }
 
 fn rate_limit_regex() -> &'static regex_lite::Regex {
@@ -558,6 +706,27 @@ mod tests {
         assert_eq!(events.len(), 1);
 
         assert_matches!(events[0], Err(ApiError::QuotaExceeded));
+    }
+
+    #[tokio::test]
+    async fn invalid_prompt_without_type_is_invalid_request() {
+        let raw_error = r#"{"type":"response.failed","sequence_number":3,"response":{"id":"resp_invalid_prompt_no_type","object":"response","created_at":1759771628,"status":"failed","background":false,"error":{"code":"invalid_prompt","message":"Invalid prompt: we've limited access to this content for safety reasons."},"incomplete_details":null}}"#;
+
+        let sse1 = format!("event: response.failed\ndata: {raw_error}\n\n");
+
+        let events = collect_events(&[sse1.as_bytes()]).await;
+
+        assert_eq!(events.len(), 1);
+
+        match &events[0] {
+            Err(ApiError::InvalidRequest { message }) => {
+                assert_eq!(
+                    message,
+                    "Invalid prompt: we've limited access to this content for safety reasons."
+                );
+            }
+            other => panic!("unexpected event: {other:?}"),
+        }
     }
 
     #[tokio::test]

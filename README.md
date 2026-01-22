@@ -76,7 +76,7 @@ npm install -g @mmmbuto/codex-cli-termux
 For now we keep **two tracks**:
 
 - **Stable:** `0.80.0-termux` (recommended for reliability on Termux)
-- **Latest:** newer upstream-based releases (e.g. `0.86.0-termux` and above)
+- **Latest:** newer upstream-based releases (e.g. `0.88.0-termux` and above)
 
 Install a specific version when needed:
 
@@ -230,7 +230,9 @@ Stable validation (2026-01-10): 49 passed / 0 failed / 0 skipped — see [CODEX_
 
 ## 🧪 Testing & Validation
 
-Latest validation (2026-01-16): 48 passed / 0 failed / 2 skipped — see [CODEX_TEST_REPORT_v0.86.0.md](./CODEX_TEST_REPORT_v0.86.0.md).
+Latest validation (2026-01-22): pending — see [CODEX_TEST_REPORT_v0.88.0.md](./CODEX_TEST_REPORT_v0.88.0.md).
+
+Previous validation (2026-01-16): 48 passed / 0 failed / 2 skipped — see [CODEX_TEST_REPORT_v0.86.0.md](./CODEX_TEST_REPORT_v0.86.0.md).
 
 <details>
 <summary>Details: automated test suite, coverage, and sample report</summary>

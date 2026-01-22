@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.88.0-termux] - 2026-01-22
+
+### Upstream
+- OpenAI Codex rust-v0.88.0 release: https://github.com/openai/codex/releases/tag/rust-v0.88.0
+- Upstream release notes and details are maintained in link above.
+- **New features:**
+  * Collaboration modes and presets to streamline multi-agent workflows
+  * Device-code auth as a standalone fallback in headless environments
+  * Request-user-input tool for explicit agent prompts
+  * Remote models and auto-enable WebSockets transport
+  * Thread/fork endpoints (conversation branching)
+
+### Termux Patches
+- Termux patches (#1–#6, #9) revalidated via verify-patches.sh.
+- **Patch #8 (bash execution)**: Not required (resolved upstream v0.80.0+)
+- **Patch #2 (compilation)**: Updated with rustls fix (native-tls → rustls)
+
+### Testing
+- CODEX_TEST_REPORT_v0.88.0.md on SamsungWork (2026-01-22): ALL PASS
+- Binary sizes: codex 65MB, codex-exec 38MB
+- All Termux patches verified (#1–#6, #9)
+
+### Documentation
+- Updated patches/README.md for v0.88.0
+- Updated STATUS.md with release status
+- Created tag: v0.88.0-termux
+- Ready for npm publish
+
+---
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [0.80.0-termux] - 2026-01-10

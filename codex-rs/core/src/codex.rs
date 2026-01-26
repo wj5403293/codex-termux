@@ -2,9 +2,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicU64;
-use std::sync::atomic::Ordering;
 
 use crate::AuthManager;
 use crate::CodexAuth;
@@ -75,7 +73,6 @@ use tracing::trace_span;
 use tracing::warn;
 
 use crate::ModelProviderInfo;
-use crate::WireApi;
 use crate::client::ModelClient;
 use crate::client_common::Prompt;
 use crate::client_common::ResponseEvent;
@@ -95,7 +92,6 @@ use crate::exec_policy::ExecPolicyUpdateError;
 use crate::feedback_tags;
 use crate::mcp::auth::compute_auth_statuses;
 use crate::mcp_connection_manager::McpConnectionManager;
-use crate::model_provider_info::CHAT_WIRE_API_DEPRECATION_SUMMARY;
 use crate::project_doc::get_user_instructions;
 use crate::protocol::AgentMessageContentDeltaEvent;
 use crate::protocol::AgentReasoningSectionBreakEvent;
@@ -187,17 +183,15 @@ pub struct CodexSpawnOk {
 
 pub(crate) const INITIAL_SUBMIT_ID: &str = "";
 pub(crate) const SUBMISSION_CHANNEL_CAPACITY: usize = 64;
-static CHAT_WIRE_API_DEPRECATION_EMITTED: AtomicBool = AtomicBool::new(false);
-
 fn maybe_push_chat_wire_api_deprecation(
-    config: &Config,
-    post_session_configured_events: &mut Vec<Event>,
+    _config: &Config,
+    _post_session_configured_events: &mut Vec<Event>,
 ) {
-    if config.model_provider.wire_api != WireApi::Chat {
     // LTS 0.80.0: Chat wire API is fully supported.
-    // No deprecation warning needed for LTS release.
-    }
+    // Suppress deprecation warning for the LTS line.
+}
 
+impl Codex {
     /// Spawn a new [`Codex`] and initialize the session.
     pub(crate) async fn spawn(
         config: Config,

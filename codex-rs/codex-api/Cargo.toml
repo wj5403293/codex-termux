@@ -26,7 +26,7 @@ assert_matches = { workspace = true }
 pretty_assertions = { workspace = true }
 tokio-test = { workspace = true }
 wiremock = { workspace = true }
-reqwest = { workspace = true }
+reqwest = { workspace = true, default-features = false }
 
 [lints]
 workspace = true

@@ -1,6 +1,6 @@
-# 🤖 Codex CLI - Termux Edition
+# 🤖 Codex CLI - Linux + Termux Edition
 
-> **Built from upstream OpenAI Codex source, compiled for Android Termux (ARM64)**
+> **Built from upstream OpenAI Codex source, compiled for Linux x64 + Android Termux (ARM64)**
 
 [![npm](https://img.shields.io/npm/v/@mmmbuto/codex-cli-termux?style=flat-square&logo=npm)](https://www.npmjs.com/package/@mmmbuto/codex-cli-termux)
 [![downloads](https://img.shields.io/npm/dt/@mmmbuto/codex-cli-termux?style=flat-square)](https://www.npmjs.com/package/@mmmbuto/codex-cli-termux)
@@ -10,7 +10,15 @@
 
 ## What This Is
 
-Built from upstream OpenAI Codex source, compiled for Android Termux. Since Termux is not officially supported by upstream, we apply minimal patches only for critical compatibility issues.
+Built from upstream OpenAI Codex source, compiled for Linux x64 and Android Termux. Since Termux is not officially supported by upstream, we apply minimal patches only for critical compatibility issues.
+
+### LTS Line (0.80.0)
+
+This npm package is the **LTS line**:
+- **Based on upstream rust-v0.80.0**
+- **Supports both /chat and /responses** wire APIs
+- **Only security/stability backports** (no features, no breaking changes)
+- **Targets Linux x64 + Android Termux (ARM64)**
 
 ### What We Do:
 ✅ **Use official OpenAI Codex source** (https://github.com/openai/codex)
@@ -43,6 +51,25 @@ and fix strategies.
 
 ## 📋 Prerequisites
 
+### Linux (x64)
+
+```bash
+# Install Node.js (example for Debian/Ubuntu)
+sudo apt-get update
+sudo apt-get install -y nodejs npm
+
+# Verify
+node --version  # v18+ (recommended v22+)
+npm --version   # v6+
+```
+
+**Requirements:**
+- Linux x64
+- Node.js >=18 (recommended >=22)
+- ~80MB storage
+
+### Termux (Android ARM64)
+
 ```bash
 # Update Termux packages
 pkg update && pkg upgrade -y
@@ -70,6 +97,8 @@ npm --version   # v6+
 ```bash
 npm install -g @mmmbuto/codex-cli-termux
 ```
+
+**Supported platforms:** Linux x64, Android Termux (ARM64). The wrapper auto-selects the correct binary.
 
 ### Verify Installation
 

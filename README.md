@@ -12,6 +12,14 @@
 
 Built from upstream OpenAI Codex source, compiled for Android Termux. Since Termux is not officially supported by upstream, we apply minimal patches only for critical compatibility issues.
 
+### LTS Line (0.80.0)
+
+This repo maintains **two release lines**:
+
+- **Latest (main)**: Termux-only, tracks upstream more closely.
+- **LTS (lts)**: **based on upstream rust-v0.80.0** and kept stable for long-term compatibility.  
+  The LTS line supports **both /chat and /responses** wire APIs, and receives **security and stability backports only** (no new features or breaking changes).
+
 ### What We Do:
 ✅ **Use official OpenAI Codex source** (https://github.com/openai/codex)
 ✅ **Compile for ARM64** (Android Termux native)

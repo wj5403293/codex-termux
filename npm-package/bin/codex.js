@@ -1,51 +1,42 @@
 #!/usr/bin/env node
+import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+function isTermux() {
+  if (process.platform === 'android') return true;
+  const prefix = process.env.PREFIX || '';
+  if (prefix.includes('/com.termux/')) return true;
+  if (process.env.TERMUX_VERSION) return true;
+  return existsSync('/data/data/com.termux/files/usr');
+}
 
-const binaryPath = join(__dirname, 'codex');
+function resolveBinary(name) {
+  if (isTermux()) {
+    return path.join(__dirname, 'android-arm64', name);
+  }
+  if (process.platform === 'linux' && process.arch === 'x64') {
+    return path.join(__dirname, 'linux-x64', name);
+  }
+  if (process.platform === 'linux' && process.arch === 'arm64') {
+    return path.join(__dirname, 'linux-arm64', name);
+  }
+  return null;
+}
 
-// Default behavior:
-// - `codex` (no args) starts the TUI (same as upstream).
-// - `codex <prompt>` runs `codex exec <prompt>` for convenience.
-// - `codex <known-subcommand|--flag>` passes args through unchanged.
-const knownSubcommands = new Set([
-  'exec',
-  'review',
-  'login',
-  'logout',
-  'mcp',
-  'mcp-server',
-  'app-server',
-  'completion',
-  'sandbox',
-  'execpolicy',
-  'apply',
-  'resume',
-  'cloud',
-  'responses-api-proxy',
-  'stdio-to-uds',
-  'features',
-  'tui'
-]);
+const bin = resolveBinary('codex');
+if (!bin || !existsSync(bin)) {
+  console.error(`Unsupported platform/arch: ${process.platform}/${process.arch}.`);
+  console.error('Supported: linux-x64, android-arm64 (Termux).');
+  process.exit(1);
+}
 
-const args = process.argv.slice(2);
-const first = args[0];
-const isOption = first?.startsWith('-');
-const isKnownSubcommand = first && knownSubcommands.has(first);
-
-const finalArgs =
-  args.length === 0 ? [] : isOption || isKnownSubcommand ? args : ['exec', ...args];
-
-const child = spawn(binaryPath, finalArgs, {
-  stdio: 'inherit',
-  env: { ...process.env, CODEX_MANAGED_BY_NPM: '1' }
-});
-
-child.on('exit', (code) => {
-  process.exit(code);
-});
+const result = spawnSync(bin, process.argv.slice(2), { stdio: 'inherit' });
+if (result.error) {
+  console.error(result.error.message);
+  process.exit(1);
+}
+process.exit(result.status ?? 1);

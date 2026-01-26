@@ -1,7 +1,7 @@
 {
   "name": "@mmmbuto/codex-cli-termux",
   "version": "0.80.0-termux",
-  "description": "OpenAI Codex CLI (upstream main, post rust-v0.80.0) packaged as 0.80.0-termux – TUI + automation for Android Termux (ARM64). Use 'codex' for TUI, 'codex exec --json' for automation.",
+  "description": "OpenAI Codex CLI (upstream main, post rust-v0.80.0) packaged as 0.80.0-termux – Linux x64 + Android Termux (ARM64) with TUI + automation. Use 'codex' for TUI, 'codex exec --json' for automation.",
   "type": "module",
   "main": "bin/codex.js",
   "bin": {
@@ -11,8 +11,10 @@
   "files": [
     "bin/codex.js",
     "bin/codex-exec.js",
-    "bin/codex",
-    "bin/codex-exec",
+    "bin/linux-x64/codex",
+    "bin/linux-x64/codex-exec",
+    "bin/android-arm64/codex",
+    "bin/android-arm64/codex-exec",
     "README.md"
   ],
   "keywords": [
@@ -43,6 +45,7 @@
     "linux"
   ],
   "cpu": [
-    "arm64"
+    "arm64",
+    "x64"
   ]
 }

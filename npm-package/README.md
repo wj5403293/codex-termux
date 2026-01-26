@@ -1,9 +1,9 @@
-# 🤖 Codex CLI - Linux + Termux Edition
+# 🤖 Codex CLI - LTS Edition
 
 > **Built from upstream OpenAI Codex source, compiled for Linux x64 + Android Termux (ARM64)**
 
-[![npm](https://img.shields.io/npm/v/@mmmbuto/codex-cli-termux?style=flat-square&logo=npm)](https://www.npmjs.com/package/@mmmbuto/codex-cli-termux)
-[![downloads](https://img.shields.io/npm/dt/@mmmbuto/codex-cli-termux?style=flat-square)](https://www.npmjs.com/package/@mmmbuto/codex-cli-termux)
+[![npm](https://img.shields.io/npm/v/@mmmbuto/codex-cli-lts?style=flat-square&logo=npm)](https://www.npmjs.com/package/@mmmbuto/codex-cli-lts)
+[![downloads](https://img.shields.io/npm/dt/@mmmbuto/codex-cli-lts?style=flat-square)](https://www.npmjs.com/package/@mmmbuto/codex-cli-lts)
 [![ko-fi](https://img.shields.io/badge/☕_Support-Ko--fi-FF5E5B?style=flat-square&logo=ko-fi)](https://ko-fi.com/dionanos)
 
 ---
@@ -95,7 +95,7 @@ npm --version   # v6+
 ### Via npm (Recommended)
 
 ```bash
-npm install -g @mmmbuto/codex-cli-termux
+npm install -g @mmmbuto/codex-cli-lts
 ```
 
 **Supported platforms:** Linux x64, Android Termux (ARM64). The wrapper auto-selects the correct binary.
@@ -111,7 +111,7 @@ codex login
 ```
 
 **Links:**
-- npm: https://www.npmjs.com/package/@mmmbuto/codex-cli-termux
+- npm: https://www.npmjs.com/package/@mmmbuto/codex-cli-lts
 - Releases: https://github.com/DioNanos/codex-termux/releases
 - Upstream: https://github.com/openai/codex
 - Web UI: [NexusCLI](https://github.com/DioNanos/nexuscli) - Optional web interface for Codex/Claude/Gemini

@@ -502,7 +502,6 @@ async fn submit_turn(
             effort: None,
             summary: ReasoningSummary::Auto,
             collaboration_mode: None,
-            personality: None,
         })
         .await?;
 

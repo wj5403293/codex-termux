@@ -23,7 +23,6 @@ fn assistant_msg(text: &str) -> ResponseItem {
         content: vec![ContentItem::OutputText {
             text: text.to_string(),
         }],
-        end_turn: None,
     }
 }
 
@@ -42,7 +41,6 @@ fn user_msg(text: &str) -> ResponseItem {
         content: vec![ContentItem::OutputText {
             text: text.to_string(),
         }],
-        end_turn: None,
     }
 }
 
@@ -53,7 +51,6 @@ fn user_input_text_msg(text: &str) -> ResponseItem {
         content: vec![ContentItem::InputText {
             text: text.to_string(),
         }],
-        end_turn: None,
     }
 }
 
@@ -96,7 +93,6 @@ fn filters_non_api_messages() {
         content: vec![ContentItem::OutputText {
             text: "ignored".to_string(),
         }],
-        end_turn: None,
     };
     let reasoning = reasoning_msg("thinking...");
     h.record_items([&system, &reasoning, &ResponseItem::Other], policy);
@@ -125,16 +121,14 @@ fn filters_non_api_messages() {
                 role: "user".to_string(),
                 content: vec![ContentItem::OutputText {
                     text: "hi".to_string()
-                }],
-                end_turn: None,
+                }]
             },
             ResponseItem::Message {
                 id: None,
                 role: "assistant".to_string(),
                 content: vec![ContentItem::OutputText {
                     text: "hello".to_string()
-                }],
-                end_turn: None,
+                }]
             }
         ]
     );
@@ -261,7 +255,6 @@ fn replace_last_turn_images_does_not_touch_user_images() {
         content: vec![ContentItem::InputImage {
             image_url: "data:image/png;base64,AAA".to_string(),
         }],
-        end_turn: None,
     }];
     let mut history = create_history_with_items(items.clone());
 

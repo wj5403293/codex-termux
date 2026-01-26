@@ -80,10 +80,6 @@ pub enum ResponseItem {
         id: Option<String>,
         role: String,
         content: Vec<ContentItem>,
-        // Do not use directly, no available consistently across all providers.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        #[ts(optional)]
-        end_turn: Option<bool>,
     },
     Reasoning {
         #[serde(default, skip_serializing)]
@@ -225,13 +221,6 @@ impl DeveloperInstructions {
         Self { text }
     }
 
-    pub fn personality_spec_message(spec: String) -> Self {
-        let message = format!(
-            "<personality_spec> The user has requested a new communication style. Future messages should adhere to the following personality: \n{spec} </personality_spec>"
-        );
-        DeveloperInstructions::new(message)
-    }
-
     pub fn from_policy(
         sandbox_policy: &SandboxPolicy,
         approval_policy: AskForApproval,
@@ -263,8 +252,13 @@ impl DeveloperInstructions {
 
     /// Returns developer instructions from a collaboration mode if they exist and are non-empty.
     pub fn from_collaboration_mode(collaboration_mode: &CollaborationMode) -> Option<Self> {
-        collaboration_mode
-            .settings
+        let settings = match collaboration_mode {
+            CollaborationMode::Plan(settings)
+            | CollaborationMode::PairProgramming(settings)
+            | CollaborationMode::Execute(settings)
+            | CollaborationMode::Custom(settings) => settings,
+        };
+        settings
             .developer_instructions
             .as_ref()
             .filter(|instructions| !instructions.is_empty())
@@ -334,7 +328,6 @@ impl From<DeveloperInstructions> for ResponseItem {
             content: vec![ContentItem::InputText {
                 text: di.into_text(),
             }],
-            end_turn: None,
         }
     }
 }
@@ -504,7 +497,6 @@ impl From<ResponseInputItem> for ResponseItem {
                 role,
                 content,
                 id: None,
-                end_turn: None,
             },
             ResponseInputItem::FunctionCallOutput { call_id, output } => {
                 Self::FunctionCallOutput { call_id, output }

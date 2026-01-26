@@ -101,7 +101,6 @@ async fn run_snapshot_command(command: &str) -> Result<SnapshotRun> {
             effort: None,
             summary: ReasoningSummary::Auto,
             collaboration_mode: None,
-            personality: None,
         })
         .await?;
 
@@ -175,7 +174,6 @@ async fn run_shell_command_snapshot(command: &str) -> Result<SnapshotRun> {
             effort: None,
             summary: ReasoningSummary::Auto,
             collaboration_mode: None,
-            personality: None,
         })
         .await?;
 
@@ -310,7 +308,6 @@ async fn shell_command_snapshot_still_intercepts_apply_patch() -> Result<()> {
             effort: None,
             summary: ReasoningSummary::Auto,
             collaboration_mode: None,
-            personality: None,
         })
         .await?;
 

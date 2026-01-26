@@ -79,7 +79,6 @@ async fn remote_models_remote_model_uses_unified_exec() -> Result<()> {
         priority: 1,
         upgrade: None,
         base_instructions: "base instructions".to_string(),
-        model_instructions_template: None,
         supports_reasoning_summaries: false,
         support_verbosity: false,
         default_verbosity: None,
@@ -142,7 +141,6 @@ async fn remote_models_remote_model_uses_unified_exec() -> Result<()> {
             effort: None,
             summary: None,
             collaboration_mode: None,
-            personality: None,
         })
         .await?;
 
@@ -179,7 +177,6 @@ async fn remote_models_remote_model_uses_unified_exec() -> Result<()> {
             effort: None,
             summary: ReasoningSummary::Auto,
             collaboration_mode: None,
-            personality: None,
         })
         .await?;
 
@@ -315,7 +312,6 @@ async fn remote_models_apply_remote_base_instructions() -> Result<()> {
         priority: 1,
         upgrade: None,
         base_instructions: remote_base.to_string(),
-        model_instructions_template: None,
         supports_reasoning_summaries: false,
         support_verbosity: false,
         default_verbosity: None,
@@ -371,7 +367,6 @@ async fn remote_models_apply_remote_base_instructions() -> Result<()> {
             effort: None,
             summary: None,
             collaboration_mode: None,
-            personality: None,
         })
         .await?;
 
@@ -389,7 +384,6 @@ async fn remote_models_apply_remote_base_instructions() -> Result<()> {
             effort: None,
             summary: ReasoningSummary::Auto,
             collaboration_mode: None,
-            personality: None,
         })
         .await?;
 
@@ -788,7 +782,6 @@ fn test_remote_model_with_policy(
         priority,
         upgrade: None,
         base_instructions: "base instructions".to_string(),
-        model_instructions_template: None,
         supports_reasoning_summaries: false,
         support_verbosity: false,
         default_verbosity: None,

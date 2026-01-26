@@ -1,7 +1,7 @@
 # 🔧 Termux Compatibility Patches
 
 This document describes the Termux‑specific patches applied to the official OpenAI Codex CLI so that it works well on Android Termux (ARM64).
-Validated for: **v0.86.0-termux** (built from upstream `rust-v0.86.0`).
+Validated for: **v0.88.0-termux** (built from upstream `rust-v0.86.0`).
 
 ---
 
@@ -650,9 +650,9 @@ We only accept patches for Termux-specific issues, not general feature requests.
 
 ---
 
-**Last Updated**: 2025-12-18
+**Last Updated**: 2026-01-22
 **Patches Applied**: 8 (revalidated for v0.80.0-termux)
-**Based on**: OpenAI Codex rust-v0.73.0
+**Based on**: OpenAI Codex rust-v0.88.0
 **Platform**: Android Termux ARM64
 **Upstream Changes**: 0.72.0 → 0.73.0 (skills manager rework, ghost snapshots v2, wrap algorithm FirstFit, stability fixes)
 
@@ -715,3 +715,41 @@ The upstream team removed `codex_process_hardening::pre_main_hardening()` from t
 - **VERDICT: PASS**
 
 All Termux patches verified functional on v0.80.0.
+
+---
+
+## v0.88.0-termux Updates
+
+### Upstream Changes Affecting Termux
+
+#### TLS Implementation Update
+**Commit**: d5c3975f0 - "Fix Android/Termux build: replace native-tls with rustls"
+**Impact**: Build now uses rustls instead of native-tls for better Termux compatibility
+
+#### New Features
+- Collaboration modes and presets for multi-agent workflows
+- Device-code auth as standalone fallback in headless environments
+- Request-user-input tool for explicit agent prompts
+- Remote models and auto-enable WebSockets transport
+- Thread/fork endpoints
+
+### Patch Status
+- ✅ Patch #1: Browser login (termux-open-url) - Verified
+- ✅ Patch #2: Compilation optimizations - Updated with rustls
+- ✅ Patch #3: Version alignment - Verified (0.88.0-termux)
+- ✅ Patch #4: Auto-update URL - Verified (DioNanos/codex-termux)
+- ✅ Patch #5: Version parser (-termux suffix) - Verified
+- ✅ Patch #6: NPM package name - Verified
+- ✅ Patch #9: Auto-update execution - Verified
+- ❌ Patch #8: Bash execution - Not required (resolved upstream v0.80.0+)
+
+### Test Results
+
+**CODEX_TEST_REPORT_v0.88.0.md Summary:**
+- Package Integrity: PASS
+- Version Verification: PASS
+- Patch Verification: PASS (all Termux patches present)
+- Core Functionality: PASS
+- Feature Availability: PASS
+- Binary sizes: codex 65MB, codex-exec 38MB
+- **VERDICT: ALL PASS**

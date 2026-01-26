@@ -8,7 +8,6 @@ use codex_core::protocol::EventMsg;
 use codex_core::protocol::Op;
 use codex_core::protocol::SandboxPolicy;
 use codex_protocol::config_types::CollaborationMode;
-use codex_protocol::config_types::ModeKind;
 use codex_protocol::config_types::ReasoningSummary;
 use codex_protocol::config_types::Settings;
 use codex_protocol::request_user_input::RequestUserInputAnswer;
@@ -133,15 +132,11 @@ async fn request_user_input_round_trip_resolves_pending() -> anyhow::Result<()> 
             model: session_model,
             effort: None,
             summary: ReasoningSummary::Auto,
-            collaboration_mode: Some(CollaborationMode {
-                mode: ModeKind::Plan,
-                settings: Settings {
-                    model: session_configured.model.clone(),
-                    reasoning_effort: None,
-                    developer_instructions: None,
-                },
-            }),
-            personality: None,
+            collaboration_mode: Some(CollaborationMode::Plan(Settings {
+                model: session_configured.model.clone(),
+                reasoning_effort: None,
+                developer_instructions: None,
+            })),
         })
         .await?;
 
@@ -157,7 +152,8 @@ async fn request_user_input_round_trip_resolves_pending() -> anyhow::Result<()> 
     answers.insert(
         "confirm_path".to_string(),
         RequestUserInputAnswer {
-            answers: vec!["yes".to_string()],
+            selected: vec!["yes".to_string()],
+            other: None,
         },
     );
     let response = RequestUserInputResponse { answers };
@@ -177,7 +173,7 @@ async fn request_user_input_round_trip_resolves_pending() -> anyhow::Result<()> 
         output_json,
         json!({
             "answers": {
-                "confirm_path": { "answers": ["yes"] }
+                "confirm_path": { "selected": ["yes"], "other": Value::Null }
             }
         })
     );
@@ -254,7 +250,6 @@ where
             effort: None,
             summary: ReasoningSummary::Auto,
             collaboration_mode: Some(collaboration_mode),
-            personality: None,
         })
         .await?;
 
@@ -273,26 +268,24 @@ where
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn request_user_input_rejected_in_execute_mode() -> anyhow::Result<()> {
-    assert_request_user_input_rejected("Execute", |model| CollaborationMode {
-        mode: ModeKind::Execute,
-        settings: Settings {
+    assert_request_user_input_rejected("Execute", |model| {
+        CollaborationMode::Execute(Settings {
             model,
             reasoning_effort: None,
             developer_instructions: None,
-        },
+        })
     })
     .await
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn request_user_input_rejected_in_custom_mode() -> anyhow::Result<()> {
-    assert_request_user_input_rejected("Custom", |model| CollaborationMode {
-        mode: ModeKind::Custom,
-        settings: Settings {
+    assert_request_user_input_rejected("Custom", |model| {
+        CollaborationMode::Custom(Settings {
             model,
             reasoning_effort: None,
             developer_instructions: None,
-        },
+        })
     })
     .await
 }

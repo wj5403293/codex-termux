@@ -173,7 +173,6 @@ impl AppServerClient {
                 limit: None,
                 sort_key: None,
                 model_providers: None,
-                archived: None,
             },
         };
         self.send(&request)?;

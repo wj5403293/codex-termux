@@ -77,9 +77,8 @@ async fn thread_fork_creates_new_thread_and_emits_started() -> Result<()> {
     assert_ne!(thread.id, conversation_id);
     assert_eq!(thread.preview, preview);
     assert_eq!(thread.model_provider, "mock_provider");
-    let thread_path = thread.path.clone().expect("thread path");
-    assert!(thread_path.is_absolute());
-    assert_ne!(thread_path, original_path);
+    assert!(thread.path.is_absolute());
+    assert_ne!(thread.path, original_path);
     assert!(thread.cwd.is_absolute());
     assert_eq!(thread.source, SessionSource::VsCode);
 

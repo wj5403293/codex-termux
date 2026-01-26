@@ -223,13 +223,11 @@ mod tests {
                 id: Some("m1".into()),
                 role: "assistant".into(),
                 content: Vec::new(),
-                end_turn: None,
             },
             ResponseItem::Message {
                 id: None,
                 role: "assistant".into(),
                 content: Vec::new(),
-                end_turn: None,
             },
         ];
 

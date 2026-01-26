@@ -28,7 +28,6 @@ pub struct ConfigLayerEntry {
     pub name: ConfigLayerSource,
     pub config: TomlValue,
     pub version: String,
-    pub disabled_reason: Option<String>,
 }
 
 impl ConfigLayerEntry {
@@ -38,26 +37,7 @@ impl ConfigLayerEntry {
             name,
             config,
             version,
-            disabled_reason: None,
         }
-    }
-
-    pub fn new_disabled(
-        name: ConfigLayerSource,
-        config: TomlValue,
-        disabled_reason: impl Into<String>,
-    ) -> Self {
-        let version = version_for_toml(&config);
-        Self {
-            name,
-            config,
-            version,
-            disabled_reason: Some(disabled_reason.into()),
-        }
-    }
-
-    pub fn is_disabled(&self) -> bool {
-        self.disabled_reason.is_some()
     }
 
     pub fn metadata(&self) -> ConfigLayerMetadata {
@@ -72,7 +52,6 @@ impl ConfigLayerEntry {
             name: self.name.clone(),
             version: self.version.clone(),
             config: serde_json::to_value(&self.config).unwrap_or(JsonValue::Null),
-            disabled_reason: self.disabled_reason.clone(),
         }
     }
 
@@ -193,7 +172,7 @@ impl ConfigLayerStack {
 
     pub fn effective_config(&self) -> TomlValue {
         let mut merged = TomlValue::Table(toml::map::Map::new());
-        for layer in self.get_layers(ConfigLayerStackOrdering::LowestPrecedenceFirst, false) {
+        for layer in &self.layers {
             merge_toml_values(&mut merged, &layer.config);
         }
         merged
@@ -203,7 +182,7 @@ impl ConfigLayerStack {
         let mut origins = HashMap::new();
         let mut path = Vec::new();
 
-        for layer in self.get_layers(ConfigLayerStackOrdering::LowestPrecedenceFirst, false) {
+        for layer in &self.layers {
             record_origins(&layer.config, &layer.metadata(), &mut path, &mut origins);
         }
 
@@ -213,25 +192,16 @@ impl ConfigLayerStack {
     /// Returns the highest-precedence to lowest-precedence layers, so
     /// `ConfigLayerSource::SessionFlags` would be first, if present.
     pub fn layers_high_to_low(&self) -> Vec<&ConfigLayerEntry> {
-        self.get_layers(ConfigLayerStackOrdering::HighestPrecedenceFirst, false)
+        self.get_layers(ConfigLayerStackOrdering::HighestPrecedenceFirst)
     }
 
     /// Returns the highest-precedence to lowest-precedence layers, so
     /// `ConfigLayerSource::SessionFlags` would be first, if present.
-    pub fn get_layers(
-        &self,
-        ordering: ConfigLayerStackOrdering,
-        include_disabled: bool,
-    ) -> Vec<&ConfigLayerEntry> {
-        let mut layers: Vec<&ConfigLayerEntry> = self
-            .layers
-            .iter()
-            .filter(|layer| include_disabled || !layer.is_disabled())
-            .collect();
-        if ordering == ConfigLayerStackOrdering::HighestPrecedenceFirst {
-            layers.reverse();
+    pub fn get_layers(&self, ordering: ConfigLayerStackOrdering) -> Vec<&ConfigLayerEntry> {
+        match ordering {
+            ConfigLayerStackOrdering::HighestPrecedenceFirst => self.layers.iter().rev().collect(),
+            ConfigLayerStackOrdering::LowestPrecedenceFirst => self.layers.iter().collect(),
         }
-        layers
     }
 }
 

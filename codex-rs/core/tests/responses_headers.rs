@@ -104,7 +104,6 @@ async fn responses_stream_includes_subagent_header_on_review() {
         content: vec![ContentItem::InputText {
             text: "hello".into(),
         }],
-        end_turn: None,
     }];
 
     let mut stream = client_session.stream(&prompt).await.expect("stream failed");
@@ -201,7 +200,6 @@ async fn responses_stream_includes_subagent_header_on_other() {
         content: vec![ContentItem::InputText {
             text: "hello".into(),
         }],
-        end_turn: None,
     }];
 
     let mut stream = client_session.stream(&prompt).await.expect("stream failed");
@@ -356,7 +354,6 @@ async fn responses_respects_model_info_overrides_from_config() {
         content: vec![ContentItem::InputText {
             text: "hello".into(),
         }],
-        end_turn: None,
     }];
 
     let mut stream = client.stream(&prompt).await.expect("stream failed");

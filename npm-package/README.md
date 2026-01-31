@@ -244,15 +244,18 @@ Common Termux issues and the fastest places to check.
 
 ---
 
+
 ## 🧪 Testing & Validation
 
-Latest validation (2026-01-31): 49 passed / 0 failed / 0 skipped — see [CODEX_TEST_REPORT_v0.80.0.md](./CODEX_TEST_REPORT_v0.80.0.md).
+**LTS validation** (2026-01-31): 62 tests, 60 passed / 0 failed / 11 skipped — see [CODEX_TEST_REPORT_v0.80.3-lts_linux.md](./CODEX_TEST_REPORT_v0.80.3-lts_linux.md).
+
+**Latest validation** (2026-01-26): 50 tests, 44 passed / 5 failed / 1 skipped — see [CODEX_TEST_REPORT_v0.91.0.md](./CODEX_TEST_REPORT_v0.91.0.md).
 
 <details>
 <summary>Details: automated test suite, coverage, and sample report</summary>
 
+
 ### Automated Test Suite
-[CODEX_TEST_SUITE.md](./CODEX_TEST_SUITE.md) - Universal test suite compatible with all Codex versions
 
 **Coverage**:
 - ✅ **82 automated tests** across 12 categories (including prep/cleanup)

@@ -104,7 +104,7 @@ npm install -g @mmmbuto/codex-cli-lts
 
 ```bash
 codex --version
-# Output: codex-cli 0.80.1-lts
+# Output: codex-cli 0.80.2-lts
 
 codex login
 # Opens browser for authentication
@@ -312,12 +312,12 @@ Codex will automatically:
 - At least 80% overall pass rate
 - No critical crashes
 
-**Example Report** (v0.80.1-lts, 2026-01-10):
+**Example Report** (v0.80.2-lts, 2026-01-10):
 ```
 CODEX CLI TEST SUITE - FINAL REPORT
 ====================================
 Platform: Android Termux ARM64
-Codex Version: 0.80.1-lts
+Codex Version: 0.80.2-lts
 Total Tests: 49
 ✅ Passed: 49
 ❌ Failed: 0

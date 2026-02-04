@@ -125,7 +125,7 @@ pub fn run_login_server(opts: ServerOptions) -> io::Result<LoginServer> {
     );
 
     if opts.open_browser {
-        // On Termux/Android, use termux-open-url directly to avoid ndk-context crash
+        // On Termux/Android, use termux-open-url directly to avoid ndk-context crash.
         #[cfg(target_os = "android")]
         {
             let _ = std::process::Command::new("termux-open-url")

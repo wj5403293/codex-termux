@@ -23,7 +23,7 @@ It is not a validation report for `@mmmbuto/codex-cli-lts` (0.80.4-lts).
 
 ## Summary
 
-The original test suite (CODEX_TEST_SUITE.md) was designed for testing version 0.88.0-termux on Android Termux. Since the target package is not available on this system, this report documents the current installation of codex-cli 0.96.0 on macOS.
+The original test suite (`test-reports/suites/legacy/CODEX_TEST_SUITE_v1.2_UNIVERSAL_TERMUX.md`) was designed for testing version 0.88.0-termux on Android Termux. Since the target package is not available on this system, this report documents the current installation of codex-cli 0.96.0 on macOS.
 
 **Overall Status**: ✅ All core functionality verified
 

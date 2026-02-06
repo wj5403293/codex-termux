@@ -9,7 +9,7 @@ Test Duration: ~00:08:00
 
 SUMMARY:
 --------
-Total Tests: 50 (suite header says 82; only 50 explicit tests in CODEX_TEST_SUITE.md)
+Total Tests: 50 (legacy suite header says 82; only 50 explicit tests in `test-reports/suites/legacy/CODEX_TEST_SUITE_v1.2_UNIVERSAL_TERMUX.md`)
 ✅ Passed: 44
 ❌ Failed: 5
 ⚠️ Skipped: 1

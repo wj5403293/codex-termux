@@ -17,3 +17,9 @@ Notes and external baselines live under `notes/`.
 - `lts/0.80.3-lts/`
 - Notes
 - `notes/`
+
+## Suites
+
+Runnable checklists live under:
+
+- `test-reports/suites/`

@@ -16,7 +16,7 @@ LTS (Long-term support) release line based on upstream OpenAI Codex rust-v0.80.0
 
 - Linux x64
 - Android Termux (ARM64)
-- macOS arm64 (via GitHub releases/CI artifacts)
+- macOS arm64 (via npm)
 
 ---
 
@@ -108,13 +108,8 @@ codex login
 ### macOS (arm64)
 
 ```bash
-# Using Homebrew
-brew install node
-
-# Download and install LTS from GitHub releases
-curl -L https://github.com/DioNanos/codex-termux/releases/latest/download/codex-cli-lts-macos-arm64.tar.gz -o codex-cli-lts-macos-arm64.tar.gz
-tar -xzf codex-cli-lts-macos-arm64.tar.gz
-sudo mv codex codex-exec /usr/local/bin/
+# Using npm
+npm install -g @mmmbuto/codex-cli-lts
 
 # Verify
 codex --version

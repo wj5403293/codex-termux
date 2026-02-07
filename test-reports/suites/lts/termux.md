@@ -5,16 +5,18 @@ for both `codex` and `codex-exec`.
 
 ## Command Selection
 
-This suite assumes you have:
-
-- `codex-glm-a` (wraps `codex`)
-- `codex-glm-a-exec` (wraps `codex-exec`)
+This suite assumes you have a shell function/alias in `~/.zshrc` that selects
+your preferred provider/profile for the `codex` CLI. The example wrapper name
+used below is `codex-glm-a`. Adjust to whatever you actually use.
 
 Verify:
 
 ```bash
 command -v codex-glm-a
-command -v codex-glm-a-exec
+command -v codex-exec
+
+# Optional: if you also wrap codex-exec via ~/.zshrc, keep using it.
+command -v codex-glm-a-exec || true
 ```
 
 ## Version Family Guard (Required)
@@ -25,8 +27,8 @@ Both must be `-lts`:
 codex-glm-a --version
 codex-glm-a --version | rg --fixed-strings "-lts"
 
-codex-glm-a-exec --version
-codex-glm-a-exec --version | rg --fixed-strings "-lts"
+codex-exec --version
+codex-exec --version | rg --fixed-strings "-lts"
 ```
 
 ## Termux Environment
@@ -46,14 +48,14 @@ Help:
 ```bash
 codex-glm-a --help
 codex-glm-a exec --help
-codex-glm-a-exec --help
+codex-exec --help
 ```
 
 Non-interactive sanity:
 
 ```bash
-codex-glm-a-exec --json "print current directory and list files"
-codex-glm-a-exec --json "create a file hello.txt with content 'hello' and then read it"
+codex-exec --json "print current directory and list files"
+codex-exec --json "create a file hello.txt with content 'hello' and then read it"
 ```
 
 Termux-specific checks (optional but useful):
@@ -75,4 +77,3 @@ cat ~/.config/codex/version.json 2>/dev/null || true
 ```
 
 and record it in a test report.
-

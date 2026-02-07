@@ -3,7 +3,6 @@
 Purpose: validate an LTS build on macOS arm64 using your `~/.zshrc` wrappers for:
 
 - `codex-glm-a` (wraps `codex`)
-- `codex-glm-a-exec` (wraps `codex-exec`)
 
 This suite is written to avoid provider-specific instructions. It only assumes
 your wrappers set whatever environment you need and then run the binaries.
@@ -12,7 +11,10 @@ your wrappers set whatever environment you need and then run the binaries.
 
 ```bash
 command -v codex-glm-a
-command -v codex-glm-a-exec
+command -v codex-exec
+
+# Optional: if you also wrap codex-exec via ~/.zshrc, keep using it.
+command -v codex-glm-a-exec || true
 ```
 
 ## Version Family Guard (Required)
@@ -23,8 +25,8 @@ Both must be `-lts`:
 codex-glm-a --version
 codex-glm-a --version | rg --fixed-strings "-lts"
 
-codex-glm-a-exec --version
-codex-glm-a-exec --version | rg --fixed-strings "-lts"
+codex-exec --version
+codex-exec --version | rg --fixed-strings "-lts"
 ```
 
 If either command reports `0.96.0` and references `@openai/codex`, you are testing
@@ -35,14 +37,14 @@ the upstream Homebrew/npm package, not this repo's LTS.
 ```bash
 codex-glm-a --help
 codex-glm-a exec --help
-codex-glm-a-exec --help
+codex-exec --help
 ```
 
 Non-interactive sanity:
 
 ```bash
-codex-glm-a-exec --json "print working directory and list files"
-codex-glm-a-exec --json "create hello.txt with content 'hello' and then read it"
+codex-exec --json "print working directory and list files"
+codex-exec --json "create hello.txt with content 'hello' and then read it"
 ```
 
 ## Updater Sanity (Important)
@@ -55,4 +57,3 @@ codex-glm-a --version
 env | rg '^CODEX_MANAGED_BY_NPM=' || true
 cat ~/.config/codex/version.json 2>/dev/null || true
 ```
-

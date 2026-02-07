@@ -23,3 +23,10 @@ Notes and external baselines live under `notes/`.
 Runnable checklists live under:
 
 - `test-reports/suites/`
+
+## Notes On 0.80.4 LTS
+
+The folder `lts/0.80.4-lts/` includes:
+
+- Linux, macOS, and Termux reports
+- a pre-fix note documenting a historical `codex` vs `codex-exec` version mismatch

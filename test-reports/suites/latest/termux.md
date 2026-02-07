@@ -13,6 +13,14 @@ npm ls -g --depth=0 @mmmbuto/codex-cli-termux || true
 
 Expected: installed version ends with `-termux` (example `0.98.0-termux`).
 
+Confirm the commands you are running are the global ones:
+
+```bash
+command -v codex
+command -v codex-exec
+ls -la "$(command -v codex)" "$(command -v codex-exec)"
+```
+
 ## Version Guard (Required)
 
 The CLI should report the expected upstream semver line. Depending on upstream,
@@ -58,4 +66,3 @@ node --version
 npm --version
 command -v termux-open-url || true
 ```
-

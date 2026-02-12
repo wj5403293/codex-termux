@@ -109,23 +109,29 @@ pub fn run_main() -> ! {
     }
 
     if use_bwrap_sandbox {
-        // Outer stage: bubblewrap first, then re-enter this binary in the
-        // sandboxed environment to apply seccomp. This path never falls back
-        // to legacy Landlock on failure.
-        let inner = build_inner_seccomp_command(
-            &sandbox_policy_cwd,
-            &sandbox_policy,
-            use_bwrap_sandbox,
-            allow_network_for_proxy,
-            command,
-        );
-        run_bwrap_with_proc_fallback(
-            &sandbox_policy_cwd,
-            &sandbox_policy,
-            inner,
-            !no_proc,
-            allow_network_for_proxy,
-        );
+        if cfg!(vendored_bwrap_available) {
+            // Outer stage: bubblewrap first, then re-enter this binary in the
+            // sandboxed environment to apply seccomp. This path never falls back
+            // to legacy Landlock on failure.
+            let inner = build_inner_seccomp_command(
+                &sandbox_policy_cwd,
+                &sandbox_policy,
+                use_bwrap_sandbox,
+                allow_network_for_proxy,
+                command,
+            );
+            run_bwrap_with_proc_fallback(
+                &sandbox_policy_cwd,
+                &sandbox_policy,
+                inner,
+                !no_proc,
+                allow_network_for_proxy,
+            );
+        } else {
+            eprintln!(
+                "codex-linux-sandbox: bwrap requested but not available in this build; falling back to legacy Landlock path"
+            );
+        }
     }
 
     // Legacy path: Landlock enforcement only, when bwrap sandboxing is not enabled.
@@ -391,7 +397,7 @@ mod tests {
     fn inserts_bwrap_argv0_before_command_separator() {
         let argv = build_bwrap_argv(
             vec!["/bin/true".to_string()],
-            &SandboxPolicy::ReadOnly,
+            &SandboxPolicy::new_read_only_policy(),
             Path::new("/"),
             BwrapOptions {
                 mount_proc: true,
@@ -425,7 +431,7 @@ mod tests {
     fn inserts_unshare_net_when_network_isolation_requested() {
         let argv = build_bwrap_argv(
             vec!["/bin/true".to_string()],
-            &SandboxPolicy::ReadOnly,
+            &SandboxPolicy::new_read_only_policy(),
             Path::new("/"),
             BwrapOptions {
                 mount_proc: true,
@@ -439,7 +445,7 @@ mod tests {
     fn inserts_unshare_net_when_proxy_only_network_mode_requested() {
         let argv = build_bwrap_argv(
             vec!["/bin/true".to_string()],
-            &SandboxPolicy::ReadOnly,
+            &SandboxPolicy::new_read_only_policy(),
             Path::new("/"),
             BwrapOptions {
                 mount_proc: true,

@@ -7,9 +7,13 @@ use std::sync::Mutex as StdMutex;
 use std::time::Duration;
 
 use anyhow::Result;
-#[cfg(not(windows))]
+#[cfg(target_os = "android")]
+use crate::pipe;
+#[cfg(all(not(windows), not(target_os = "android")))]
 use portable_pty::native_pty_system;
+#[cfg(not(target_os = "android"))]
 use portable_pty::CommandBuilder;
+#[cfg(not(target_os = "android"))]
 use portable_pty::PtySize;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
@@ -33,16 +37,19 @@ pub fn conpty_supported() -> bool {
     true
 }
 
+#[cfg(not(target_os = "android"))]
 struct PtyChildTerminator {
     killer: Box<dyn portable_pty::ChildKiller + Send + Sync>,
 }
 
+#[cfg(not(target_os = "android"))]
 impl ChildTerminator for PtyChildTerminator {
     fn kill(&mut self) -> std::io::Result<()> {
         self.killer.kill()
     }
 }
 
+#[cfg(not(target_os = "android"))]
 fn platform_native_pty_system() -> Box<dyn portable_pty::PtySystem + Send> {
     #[cfg(windows)]
     {
@@ -63,6 +70,13 @@ pub async fn spawn_process(
     env: &HashMap<String, String>,
     arg0: &Option<String>,
 ) -> Result<SpawnedProcess> {
+    #[cfg(target_os = "android")]
+    {
+        return pipe::spawn_process(program, args, cwd, env, arg0).await;
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
     if program.is_empty() {
         anyhow::bail!("missing program for PTY spawn");
     }
@@ -171,4 +185,5 @@ pub async fn spawn_process(
         output_rx,
         exit_rx,
     })
+    }
 }

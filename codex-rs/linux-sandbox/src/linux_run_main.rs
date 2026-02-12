@@ -109,23 +109,29 @@ pub fn run_main() -> ! {
     }
 
     if use_bwrap_sandbox {
-        // Outer stage: bubblewrap first, then re-enter this binary in the
-        // sandboxed environment to apply seccomp. This path never falls back
-        // to legacy Landlock on failure.
-        let inner = build_inner_seccomp_command(
-            &sandbox_policy_cwd,
-            &sandbox_policy,
-            use_bwrap_sandbox,
-            allow_network_for_proxy,
-            command,
-        );
-        run_bwrap_with_proc_fallback(
-            &sandbox_policy_cwd,
-            &sandbox_policy,
-            inner,
-            !no_proc,
-            allow_network_for_proxy,
-        );
+        if cfg!(vendored_bwrap_available) {
+            // Outer stage: bubblewrap first, then re-enter this binary in the
+            // sandboxed environment to apply seccomp. This path never falls back
+            // to legacy Landlock on failure.
+            let inner = build_inner_seccomp_command(
+                &sandbox_policy_cwd,
+                &sandbox_policy,
+                use_bwrap_sandbox,
+                allow_network_for_proxy,
+                command,
+            );
+            run_bwrap_with_proc_fallback(
+                &sandbox_policy_cwd,
+                &sandbox_policy,
+                inner,
+                !no_proc,
+                allow_network_for_proxy,
+            );
+        } else {
+            eprintln!(
+                "codex-linux-sandbox: bwrap requested but not available in this build; falling back to legacy Landlock path"
+            );
+        }
     }
 
     // Legacy path: Landlock enforcement only, when bwrap sandboxing is not enabled.

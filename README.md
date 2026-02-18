@@ -61,7 +61,7 @@ We apply patches for issues that:
 - **Are not addressed by upstream** (Termux is not officially supported)
 - **Are minimal and well-documented**
 
-**Current patches**: See [patches/](./patches/) directory for full documentation.
+**Current patches**: See [patches/README.md](./patches/README.md) for full documentation.
 
 ### LTS Updates
 - Based on rust-v0.80.0 (minimal features + security only)

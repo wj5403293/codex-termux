@@ -10,6 +10,7 @@ use async_trait::async_trait;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -269,6 +270,28 @@ impl NetworkProxyBuilder {
         self
     }
 
+    pub fn policy_decider<D>(self, _decider: D) -> Self
+    where
+        D: NetworkPolicyDecider,
+    {
+        self
+    }
+
+    pub fn policy_decider_arc(self, _decider: Arc<dyn NetworkPolicyDecider>) -> Self {
+        self
+    }
+
+    pub fn blocked_request_observer<O>(self, _observer: O) -> Self
+    where
+        O: BlockedRequestObserver,
+    {
+        self
+    }
+
+    pub fn blocked_request_observer_arc(self, _observer: Arc<dyn BlockedRequestObserver>) -> Self {
+        self
+    }
+
     pub async fn build(self) -> Result<NetworkProxy> {
         Ok(NetworkProxy {
             _state: self.state,
@@ -311,94 +334,243 @@ pub fn host_and_port_from_network_addr(network_addr: &str, default_port: u16) ->
         format!("{without_scheme}:{default_port}")
     }
 }
-// Stubs for v0.104.0 compatibility
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum NetworkDecision {
-    Allow,
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum NetworkPolicyDecision {
     Deny,
     Ask,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum NetworkDecisionSource {
-    Policy,
-    User,
+    BaselinePolicy,
+    ModeGuard,
+    ProxyState,
     Decider,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct NetworkPolicyDecision {
-    pub decision: NetworkDecision,
-    pub source: NetworkDecisionSource,
-    pub reason: Option<String>,
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum NetworkDecision {
+    Allow,
+    Deny {
+        reason: String,
+        source: NetworkDecisionSource,
+        decision: NetworkPolicyDecision,
+    },
 }
 
-impl NetworkPolicyDecision {
-    pub fn allow() -> Self {
-        Self { decision: NetworkDecision::Allow, source: NetworkDecisionSource::Policy, reason: None }
+impl NetworkDecision {
+    pub fn deny(reason: impl Into<String>) -> Self {
+        Self::deny_with_source(reason, NetworkDecisionSource::Decider)
     }
-    pub fn deny() -> Self {
-        Self { decision: NetworkDecision::Deny, source: NetworkDecisionSource::Policy, reason: None }
+
+    pub fn ask(reason: impl Into<String>) -> Self {
+        Self::ask_with_source(reason, NetworkDecisionSource::Decider)
     }
-    pub fn ask(reason: &str) -> Self {
-        Self { decision: NetworkDecision::Ask, source: NetworkDecisionSource::Policy, reason: Some(reason.to_string()) }
+
+    pub fn deny_with_source(reason: impl Into<String>, source: NetworkDecisionSource) -> Self {
+        let reason = reason.into();
+        Self::Deny {
+            reason: if reason.is_empty() {
+                "policy_denied".to_string()
+            } else {
+                reason
+            },
+            source,
+            decision: NetworkPolicyDecision::Deny,
+        }
     }
-    pub const Deny: Self = Self { decision: NetworkDecision::Deny, source: NetworkDecisionSource::Policy, reason: None };
-    pub const Ask: Self = Self { decision: NetworkDecision::Ask, source: NetworkDecisionSource::Policy, reason: None };
+
+    pub fn ask_with_source(reason: impl Into<String>, source: NetworkDecisionSource) -> Self {
+        let reason = reason.into();
+        Self::Deny {
+            reason: if reason.is_empty() {
+                "policy_denied".to_string()
+            } else {
+                reason
+            },
+            source,
+            decision: NetworkPolicyDecision::Ask,
+        }
+    }
 }
 
-#[derive(Debug, Clone)]
-pub struct NetworkPolicyRequest {
-    pub url: String,
-    pub method: String,
-    pub attempt_id: Option<String>,
-    pub host: String,
-    pub protocol: NetworkProtocol,
-}
-
-#[derive(Debug, Clone)]
-pub struct NetworkPolicyRequestArgs {
-    pub url: String,
-    pub method: String,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NetworkProtocol {
     Http,
-    Https,
     HttpsConnect,
-    Socks5,
     Socks5Tcp,
     Socks5Udp,
 }
 
-#[derive(Debug, Clone)]
-pub struct BlockedRequest {
-    pub url: String,
+impl NetworkProtocol {
+    pub const fn as_policy_protocol(self) -> &'static str {
+        match self {
+            Self::Http => "http",
+            Self::HttpsConnect => "https_connect",
+            Self::Socks5Tcp => "socks5_tcp",
+            Self::Socks5Udp => "socks5_udp",
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct NetworkPolicyRequest {
+    pub protocol: NetworkProtocol,
     pub host: String,
-    pub reason: String,
+    pub port: u16,
+    pub client_addr: Option<String>,
+    pub method: Option<String>,
+    pub command: Option<String>,
+    pub exec_policy_hint: Option<String>,
     pub attempt_id: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-pub struct BlockedRequestArgs {
-    pub url: String,
+pub struct NetworkPolicyRequestArgs {
+    pub protocol: NetworkProtocol,
+    pub host: String,
+    pub port: u16,
+    pub client_addr: Option<String>,
+    pub method: Option<String>,
+    pub command: Option<String>,
+    pub exec_policy_hint: Option<String>,
+    pub attempt_id: Option<String>,
+}
+
+impl NetworkPolicyRequest {
+    pub fn new(args: NetworkPolicyRequestArgs) -> Self {
+        let NetworkPolicyRequestArgs {
+            protocol,
+            host,
+            port,
+            client_addr,
+            method,
+            command,
+            exec_policy_hint,
+            attempt_id,
+        } = args;
+        Self {
+            protocol,
+            host,
+            port,
+            client_addr,
+            method,
+            command,
+            exec_policy_hint,
+            attempt_id,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct BlockedRequest {
     pub host: String,
     pub reason: String,
+    pub client: Option<String>,
+    pub method: Option<String>,
+    pub mode: Option<NetworkMode>,
+    pub protocol: String,
+    pub attempt_id: Option<String>,
+    pub decision: Option<String>,
+    pub source: Option<String>,
+    pub port: Option<u16>,
+    pub timestamp: i64,
+}
+
+pub struct BlockedRequestArgs {
+    pub host: String,
+    pub reason: String,
+    pub client: Option<String>,
+    pub method: Option<String>,
+    pub mode: Option<NetworkMode>,
+    pub protocol: String,
+    pub attempt_id: Option<String>,
+    pub decision: Option<String>,
+    pub source: Option<String>,
+    pub port: Option<u16>,
+}
+
+impl BlockedRequest {
+    pub fn new(args: BlockedRequestArgs) -> Self {
+        let BlockedRequestArgs {
+            host,
+            reason,
+            client,
+            method,
+            mode,
+            protocol,
+            attempt_id,
+            decision,
+            source,
+            port,
+        } = args;
+        Self {
+            host,
+            reason,
+            client,
+            method,
+            mode,
+            protocol,
+            attempt_id,
+            decision,
+            source,
+            port,
+            timestamp: unix_timestamp(),
+        }
+    }
 }
 
 #[async_trait]
 pub trait BlockedRequestObserver: Send + Sync + 'static {
-    async fn on_blocked(&self, _blocked: &BlockedRequest) {}
+    async fn on_blocked_request(&self, _request: BlockedRequest);
+}
+
+#[async_trait]
+impl<O: BlockedRequestObserver + ?Sized> BlockedRequestObserver for Arc<O> {
+    async fn on_blocked_request(&self, request: BlockedRequest) {
+        (**self).on_blocked_request(request).await;
+    }
+}
+
+#[async_trait]
+impl<F, Fut> BlockedRequestObserver for F
+where
+    F: Fn(BlockedRequest) -> Fut + Send + Sync + 'static,
+    Fut: Future<Output = ()> + Send,
+{
+    async fn on_blocked_request(&self, request: BlockedRequest) {
+        (self)(request).await;
+    }
 }
 
 #[async_trait]
 pub trait NetworkPolicyDecider: Send + Sync + 'static {
-    async fn evaluate(&self, _request: &NetworkPolicyRequest) -> NetworkPolicyDecision;
+    async fn decide(&self, req: NetworkPolicyRequest) -> NetworkDecision;
 }
 
-impl NetworkProxyBuilder {
-    pub fn policy_decider_arc(self, _decider: Arc<dyn NetworkPolicyDecider>) -> Self { self }
-    pub fn policy_decider(self, _decider: Box<dyn NetworkPolicyDecider>) -> Self { self }
-    pub fn blocked_request_observer_arc(self, _observer: Arc<dyn BlockedRequestObserver>) -> Self { self }
+#[async_trait]
+impl<D: NetworkPolicyDecider + ?Sized> NetworkPolicyDecider for Arc<D> {
+    async fn decide(&self, req: NetworkPolicyRequest) -> NetworkDecision {
+        (**self).decide(req).await
+    }
+}
+
+#[async_trait]
+impl<F, Fut> NetworkPolicyDecider for F
+where
+    F: Fn(NetworkPolicyRequest) -> Fut + Send + Sync + 'static,
+    Fut: Future<Output = NetworkDecision> + Send,
+{
+    async fn decide(&self, req: NetworkPolicyRequest) -> NetworkDecision {
+        (self)(req).await
+    }
+}
+
+fn unix_timestamp() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or_default()
 }

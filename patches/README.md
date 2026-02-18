@@ -7,6 +7,56 @@ Validated for: **v0.104.0-termux** (built from upstream `rust-v0.104.0`).
 
 ## Patch List
 
+### 0. Android Stub API Alignment (v0.104.0 merge fix)
+
+**File**: `codex-rs/network-proxy/src/android_stub.rs`  
+**Date Applied**: 2026-02-18  
+**Upstream Context**: merge of `rust-v0.104.0`
+
+#### Problem
+After merging upstream `0.104.0`, Android/Termux build failed because the
+`network-proxy` Android stub no longer matched the network-policy interfaces
+used by `codex-core`:
+
+- Missing `NetworkDecision::ask(...)` and `NetworkDecision::deny(...)`
+- Missing `BlockedRequest.decision` field
+- Missing builder hooks for policy decider and blocked-request observer
+- Trait-object cast errors for closure-based `NetworkPolicyDecider` and
+  `BlockedRequestObserver`
+
+#### Solution
+Extended `android_stub.rs` to mirror the API expected by upstream `0.104.0`:
+
+- Added builder methods:
+  - `policy_decider`, `policy_decider_arc`
+  - `blocked_request_observer`, `blocked_request_observer_arc`
+- Added/updated network policy models:
+  - `NetworkPolicyDecision`, `NetworkDecisionSource`, `NetworkDecision`
+  - `NetworkProtocol`, `NetworkPolicyRequest`, `BlockedRequest`
+- Added constructors/helpers:
+  - `NetworkDecision::{deny, ask, deny_with_source, ask_with_source}`
+  - `NetworkPolicyRequest::new(...)`
+  - `BlockedRequest::new(...)`
+- Updated trait signatures and added impls for `Arc<T>` and closures to match
+  usage in core.
+
+#### Validation
+```bash
+cargo check -p codex-network-proxy --target aarch64-linux-android
+cargo check -p codex-core --target aarch64-linux-android
+cargo check -p codex-cli --target aarch64-linux-android
+cargo build --release --target aarch64-linux-android -p codex-cli -p codex-exec
+```
+
+All commands completed successfully after the patch.
+
+#### Impact
+- Restores Android/Termux buildability for v0.104.0
+- Keeps compatibility with upstream network-policy behavior on non-Android
+  targets
+
+---
+
 ### 1. Browser Login Fix
 
 **File**: `codex-rs/login/src/server.rs`

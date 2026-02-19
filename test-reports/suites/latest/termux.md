@@ -69,8 +69,9 @@ codex-exec --sandbox workspace-write --skip-git-repo-check --json "create hello.
 Binary architecture guard:
 
 ```bash
-file "$(command -v codex)"
-file "$(command -v codex-exec)"
+PKG_BIN_DIR="$(npm root -g)/@mmmbuto/codex-cli-termux/bin"
+file "$PKG_BIN_DIR/codex"
+file "$PKG_BIN_DIR/codex-exec"
 ```
 
 Expected:
@@ -81,7 +82,7 @@ Network-path smoke (must not panic):
 
 ```bash
 codex-exec --sandbox workspace-write --skip-git-repo-check --json \
-  "run one network check with curl -I https://example.com and report the first HTTP status line only"
+  "run one network check with curl -I https://www.google.com and report the first HTTP status line only"
 ```
 
 Expected:

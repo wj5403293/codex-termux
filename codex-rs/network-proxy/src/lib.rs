@@ -95,6 +95,7 @@ pub use runtime::ConfigState;
 pub use runtime::NetworkProxyState;
 
 #[cfg(not(target_os = "android"))]
+pub use state::NetworkProxyAuditMetadata;
 pub use state::NetworkProxyConstraintError;
 #[cfg(not(target_os = "android"))]
 pub use state::NetworkProxyConstraints;

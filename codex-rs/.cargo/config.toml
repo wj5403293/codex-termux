@@ -11,6 +11,6 @@ rustflags = ["-C", "link-arg=/STACK:8388608", "-C", "link-arg=/arm64hazardfree"]
 rustflags = ["-C", "link-arg=-Wl,--stack,8388608"]
 
 [target.aarch64-linux-android]
-ar = "/opt/homebrew/share/android-ndk/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-ar"
-linker = "/opt/homebrew/share/android-ndk/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android24-clang"
+ar = "llvm-ar"
+linker = "aarch64-linux-android-clang"
 rustflags = ["-C", "link-arg=-lc++_shared"]

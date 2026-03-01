@@ -41,14 +41,27 @@ const isKnownSubcommand = first && knownSubcommands.has(first);
 const finalArgs =
   args.length === 0 ? [] : isOption || isKnownSubcommand ? args : ['exec', ...args];
 
-// Set LD_LIBRARY_PATH to include the bin directory for libc++_shared.so
+const TERMUX_PREFIX = process.env.PREFIX || '/data/data/com.termux/files/usr';
+
+function sanitizeLdLibraryPath(binDir) {
+  const blocked = new Set([
+    `${TERMUX_PREFIX}/lib`,
+    `${TERMUX_PREFIX}/libexec`,
+    '/data/data/com.termux/files/usr/lib',
+    '/data/data/com.termux/files/usr/libexec'
+  ]);
+
+  const extraPaths = (process.env.LD_LIBRARY_PATH || '')
+    .split(':')
+    .filter((entry) => entry && !blocked.has(entry));
+
+  return [binDir, ...extraPaths].join(':');
+}
+
+// Keep bundled libc++ visible while avoiding Termux liblzma conflicts.
 const env = { ...process.env, CODEX_MANAGED_BY_NPM: '1' };
 const binDir = __dirname;
-if (process.env.LD_LIBRARY_PATH) {
-  env.LD_LIBRARY_PATH = `${binDir}:${process.env.LD_LIBRARY_PATH}`;
-} else {
-  env.LD_LIBRARY_PATH = binDir;
-}
+env.LD_LIBRARY_PATH = sanitizeLdLibraryPath(binDir);
 
 const child = spawn(binaryPath, finalArgs, {
   stdio: 'inherit',

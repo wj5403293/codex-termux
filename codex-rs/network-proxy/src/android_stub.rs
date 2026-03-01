@@ -173,10 +173,24 @@ pub trait ConfigReloader: Send + Sync {
     async fn reload_now(&self) -> Result<ConfigState>;
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct NetworkProxyAuditMetadata {
+    pub conversation_id: Option<String>,
+    pub app_version: Option<String>,
+    pub user_account_id: Option<String>,
+    pub auth_mode: Option<String>,
+    pub originator: Option<String>,
+    pub user_email: Option<String>,
+    pub terminal_type: Option<String>,
+    pub model: Option<String>,
+    pub slug: Option<String>,
+}
+
 #[derive(Clone)]
 pub struct NetworkProxyState {
     state: ConfigState,
     _reloader: Arc<dyn ConfigReloader>,
+    _audit_metadata: NetworkProxyAuditMetadata,
 }
 
 impl std::fmt::Debug for NetworkProxyState {
@@ -191,6 +205,19 @@ impl NetworkProxyState {
         Self {
             state,
             _reloader: reloader,
+            _audit_metadata: NetworkProxyAuditMetadata::default(),
+        }
+    }
+
+    pub fn with_reloader_and_audit_metadata(
+        state: ConfigState,
+        reloader: Arc<dyn ConfigReloader>,
+        audit_metadata: NetworkProxyAuditMetadata,
+    ) -> Self {
+        Self {
+            state,
+            _reloader: reloader,
+            _audit_metadata: audit_metadata,
         }
     }
 

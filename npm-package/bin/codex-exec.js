@@ -19,9 +19,18 @@ const args = hasDedicatedExecBinary
   ? process.argv.slice(2)
   : ['exec', ...process.argv.slice(2)];
 
+// Set LD_LIBRARY_PATH to include the bin directory for libc++_shared.so
+const env = { ...process.env };
+const binDir = __dirname;
+if (process.env.LD_LIBRARY_PATH) {
+  env.LD_LIBRARY_PATH = `${binDir}:${process.env.LD_LIBRARY_PATH}`;
+} else {
+  env.LD_LIBRARY_PATH = binDir;
+}
+
 const child = spawn(binaryPath, args, {
   stdio: 'inherit',
-  env: { ...process.env, CODEX_MANAGED_BY_NPM: '1' }
+  env
 });
 
 child.on('exit', (code) => {

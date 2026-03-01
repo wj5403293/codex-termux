@@ -41,9 +41,18 @@ const isKnownSubcommand = first && knownSubcommands.has(first);
 const finalArgs =
   args.length === 0 ? [] : isOption || isKnownSubcommand ? args : ['exec', ...args];
 
+// Set LD_LIBRARY_PATH to include the bin directory for libc++_shared.so
+const env = { ...process.env, CODEX_MANAGED_BY_NPM: '1' };
+const binDir = __dirname;
+if (process.env.LD_LIBRARY_PATH) {
+  env.LD_LIBRARY_PATH = `${binDir}:${process.env.LD_LIBRARY_PATH}`;
+} else {
+  env.LD_LIBRARY_PATH = binDir;
+}
+
 const child = spawn(binaryPath, finalArgs, {
   stdio: 'inherit',
-  env: { ...process.env, CODEX_MANAGED_BY_NPM: '1' }
+  env
 });
 
 child.on('exit', (code) => {

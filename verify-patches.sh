@@ -1,54 +1,108 @@
 #!/bin/bash
-echo "🔍 VERIFYING ALL TERMUX PATCHES POST-MERGE..."
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$ROOT_DIR"
+
+echo "🔍 VERIFYING TERMUX PATCH SET..."
 echo ""
 
+pass() { echo "✅ PRESENT"; }
+fail() { echo "❌ MISSING!"; exit 1; }
+
 # Patch #1
-echo -n "Patch #1 (Browser Login): "
-if grep -q "target_os.*android" codex-rs/login/src/server.rs && grep -q "termux-open-url" codex-rs/login/src/server.rs; then
-    echo "✅ PRESENT"
+printf "Patch #1 (Browser Login): "
+if grep -q "target_os.*android" codex-rs/login/src/server.rs \
+  && grep -q "termux-open-url" codex-rs/login/src/server.rs; then
+  pass
 else
-    echo "❌ MISSING!"; exit 1
+  fail
 fi
 
 # Patch #2
-echo -n "Patch #2 (RAM Optimization): "
+printf "Patch #2 (RAM Optimization): "
 if grep -q "lto = false" codex-rs/Cargo.toml; then
-    echo "✅ PRESENT"
+  pass
 else
-    echo "❌ MISSING!"; exit 1
+  fail
 fi
 
 # Patch #4
-echo -n "Patch #4 (Auto-Update URL): "
+printf "Patch #4 (Auto-Update URL): "
 if grep -q "DioNanos/codex-termux" codex-rs/tui/src/updates.rs; then
-    echo "✅ PRESENT"
+  pass
 else
-    echo "❌ MISSING!"; exit 1
+  fail
 fi
 
 # Patch #5
-echo -n "Patch #5 (Version Parser): "
+printf "Patch #5 (Version Parser): "
 if grep -q "split('-')" codex-rs/tui/src/updates.rs; then
-    echo "✅ PRESENT"
+  pass
 else
-    echo "❌ MISSING!"; exit 1
+  fail
 fi
 
 # Patch #6
-echo -n "Patch #6 (NPM Package): "
+printf "Patch #6 (NPM Package): "
 if grep -q "@mmmbuto/codex-cli-termux" codex-rs/tui/src/update_action.rs; then
-    echo "✅ PRESENT"
+  pass
 else
-    echo "❌ MISSING!"; exit 1
+  fail
 fi
 
 # Patch #9
-echo -n "Patch #9 (Auto-Update Exec): "
+printf "Patch #9 (Auto-Update Exec): "
 if grep -q "update_action = exit_info.update_action" codex-rs/cli/src/main.rs \
-    && grep -q "run_update_action" codex-rs/cli/src/main.rs; then
-    echo "✅ PRESENT"
+  && grep -q "run_update_action" codex-rs/cli/src/main.rs; then
+  pass
 else
-    echo "❌ MISSING!"; exit 1
+  fail
+fi
+
+# Patch #10
+printf "Patch #10 (Launcher + libc++ fallback): "
+if grep -q 'exec "\$SCRIPT_DIR/codex.bin"' npm-package/bin/codex \
+  && grep -q 'exec "\$SCRIPT_DIR/codex-exec.bin"' npm-package/bin/codex-exec \
+  && grep -q 'LD_LIBRARY_PATH' npm-package/bin/codex \
+  && grep -q 'LD_LIBRARY_PATH' npm-package/bin/codex-exec \
+  && [ -x npm-package/bin/codex.bin ] \
+  && [ -x npm-package/bin/codex-exec.bin ] \
+  && grep -q '"bin/codex.bin"' npm-package/package.json \
+  && grep -q '"bin/codex-exec.bin"' npm-package/package.json; then
+  pass
+else
+  fail
+fi
+
+# Bazel/Toolchain patch set declared in MODULE.bazel
+printf "Bazel declared patch files: "
+DECLARED_PATCHES=$(grep -o "//patches:[^\" ]*\\.patch" MODULE.bazel | sed 's#//patches:##' | sort -u || true)
+if [ -z "$DECLARED_PATCHES" ]; then
+  fail
+fi
+
+MISSING_DECLARED=0
+for patch in $DECLARED_PATCHES; do
+  if [ ! -f "patches/$patch" ]; then
+    echo ""
+    echo "  ❌ Declared but missing: patches/$patch"
+    MISSING_DECLARED=1
+  fi
+done
+if [ "$MISSING_DECLARED" -ne 0 ]; then
+  exit 1
+fi
+pass
+
+# Informational: patch files not currently declared in MODULE.bazel
+UNDECLARED=$(comm -23 \
+  <(find patches -maxdepth 1 -type f -name "*.patch" -printf "%f\n" | sort) \
+  <(printf "%s\n" "$DECLARED_PATCHES" | sort) || true)
+if [ -n "$UNDECLARED" ]; then
+  echo ""
+  echo "ℹ️  Patch files present but not declared in MODULE.bazel:"
+  printf "  - %s\n" $UNDECLARED
 fi
 
 echo ""
